@@ -1,0 +1,22 @@
+{
+  "name": "ii-backend",
+  "version": "1.0.0",
+  "description": "Server for Intrant Inferis mobile Game",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntoTheVerse/Intrant-Inferis-NodeJS.git"
+  },
+  "author": "lopeselio",
+  "license": "GPL-3.0-or-later",
+  "bugs": {
+    "url": "https://github.com/IntoTheVerse/Intrant-Inferis-NodeJS/issues"
+  },
+  "homepage": "https://github.com/IntoTheVerse/Intrant-Inferis-NodeJS#readme",
+  "dependencies": {
+    "express": "^4.18.3"
+  }
+}
