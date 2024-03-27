@@ -95,3 +95,7 @@ app.get('/mint_potion_cnft:player_address', async(req, res) => {
         res.status(500).send(error.message);
     }
 })
+
+app.listen( 8080, () => {
+    console.log("Server has started!!!")
+} );
