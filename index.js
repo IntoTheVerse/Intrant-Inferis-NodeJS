@@ -1,3 +1,5 @@
+    //Replace "start": "nodemon server.js" with "start": "nodemon index.js"
+
 // solana
 const { struct, u32, ns64 } = require("@solana/buffer-layout");
 const { Buffer } = require("buffer");
