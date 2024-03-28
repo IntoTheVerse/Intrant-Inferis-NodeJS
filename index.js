@@ -1,28 +1,28 @@
     //Replace "start": "nodemon server.js" with "start": "nodemon index.js"
 
 // solana
-const { struct, u32, ns64 } = require("@solana/buffer-layout");
-const { Buffer } = require("buffer");
-const web3 = require("@solana/web3.js");
+// const { struct, u32, ns64 } = require("@solana/buffer-layout");
+// const { Buffer } = require("buffer");
+// const web3 = require("@solana/web3.js");
 
 // express + node
 const express = require('express');
 const app = express();
 app.use(express.json());
 
-// access to keypair 
-let keypair = web3.Keypair.generate();
-let payer = web3.Keypair.generate();
+// // access to keypair 
+// let keypair = web3.Keypair.generate();
+// let payer = web3.Keypair.generate();
 
-// connection to devnet
-let connection = new web3.Connection(web3.clusterApiUrl("devnet"));
+// // connection to devnet
+// let connection = new web3.Connection(web3.clusterApiUrl("devnet"));
 
-let airdropSignature = await connection.requestAirdrop(
-  payer.publicKey,
-  web3.LAMPORTS_PER_SOL,
-);
+// let airdropSignature = await connection.requestAirdrop(
+//   payer.publicKey,
+//   web3.LAMPORTS_PER_SOL,
+// );
 
-await connection.confirmTransaction({ signature: airdropSignature });
+// await connection.confirmTransaction({ signature: airdropSignature });
 
 // copied from solana documentation but should go inside app.get() for the specific functions when making calls below
 
@@ -42,60 +42,73 @@ await connection.confirmTransaction({ signature: airdropSignature });
 // allocateStruct.layout.encode(layoutFields, data);
 
 
+// sample get request 
+// /add_Score_SOAR \\
 
+app.get('/', async(req, res) => {
+    try {
+        // const id = req.params.player_address;
+        // call the contract
+    res.send("Here is your unity WebGL application");
+
+    } catch {
+        res.status(500).send(error.message);
+    }
+})
 
 
 // /add_Score_SOAR \\
 
-app.get('/add_score_soar/:player_address', async(req, res) => {
-    try {
-        // const id = req.params.player_address;
-        // call the contract
-    } catch {
-        res.status(500).send(error.message);
-    }
-})
+// app.get('/add_score_soar/:player_address', async(req, res) => {
+//     try {
+//         // const id = req.params.player_address;
+//         // call the contract
+//     } catch {
+//         res.status(500).send(error.message);
+//     }
+// })
 
 // /mint_CNFT
-app.get('/mint_cnft:player_address', async(req, res) => {
-    try {
-        // const id = req.params.player_address;
-        // call the contract
-    } catch {
-        res.status(500).send(error.message);
-    }
-})
+// app.get('/mint_cnft:player_address', async(req, res) => {
+//     try {
+//         // const id = req.params.player_address;
+//         // call the contract
+//     } catch {
+//         res.status(500).send(error.message);
+//     }
+// })
 
 // /update_CNFT
-app.get('/update_cnft:player_address', async(req, res) => {
-    try {
-        // const id = req.params.player_address;
-        // call the contract
-    } catch {
-        res.status(500).send(error.message);
-    }
-})
+// app.get('/update_cnft:player_address', async(req, res) => {
+//     try {
+//         // const id = req.params.player_address;
+//         // call the contract
+//     } catch {
+//         res.status(500).send(error.message);
+//     }
+// })
 
 // /mint_CNFT_Checked (to check if ingredients exist, and burn them if present)
-app.get('/check_ingredients_cnft:player_address/#/?ingredient1=value&ingredient2=value&ingredient3=value', async(req, res) => {
-    try {
-        // const id = req.params.player_address;
-        // call the contract
-    } catch {
-        res.status(500).send(error.message);
-    }
-})
+// app.get('/check_ingredients_cnft:player_address/#/?ingredient1=value&ingredient2=value&ingredient3=value', async(req, res) => {
+//     try {
+//         // const id = req.params.player_address;
+//         // call the contract
+//     } catch {
+//         res.status(500).send(error.message);
+//     }
+// })
 
 // /mint_cNFT_potion
-app.get('/mint_potion_cnft:player_address', async(req, res) => {
-    try {
-        // const id = req.params.player_address;
-        // call the contract
-    } catch {
-        res.status(500).send(error.message);
-    }
-})
+// app.get('/mint_potion_cnft:player_address', async(req, res) => {
+//     try {
+//         // const id = req.params.player_address;
+//         // call the contract
+//     } catch {
+//         res.status(500).send(error.message);
+//     }
+// })
 
-app.listen( 8080, () => {
-    console.log("Server has started!!!")
-} );
+const port = 3000;
+app.listen(port, () => {
+    console.log("API server is listening on port 3000")
+})
