@@ -42,22 +42,19 @@ const nftData = {
     // try {
         // const id = req.params.player_address;
         // call the contract
-        async function mintNft() {
-            const createProjectResponse = await axios.post(
-                `${underdogApiEndpoint}/v2/projects/`,
-                projectData,
-                config
-            )
-
+    async function mintNft()
+    {
         let projectAccountInfo = null;
 
         while (!projectAccountInfo) {
-            projectAccountInfo = await connection.getAccountInfo(new web3.PublicKey(createProjectResponse.data.mintAddress));
+            projectAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("DSwGuRGnVHjUDiTY2grMo5wyDvizrFV6rcUTCsy4KKBQ")
+            );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
 
         const createNftResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/${createProjectResponse.data.projectId}/nfts`,
+            `${underdogApiEndpoint}/v2/projects/${1}/nfts`,
             nftData,
             config
         );
@@ -65,7 +62,7 @@ const nftData = {
         let retrieveNFT;
         do {
             retrieveNFT = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/${createProjectResponse.data.projectId}/nfts/${createNftResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/${1}/nfts/${createNftResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
