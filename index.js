@@ -135,11 +135,41 @@ app.get('/warrior/:NftId', async(req, res) => {
             url: `https://devnet.underdogprotocol.com/v2/projects/40/nfts/${nftid}`,
             headers: {
               accept: 'application/json',
-              authorization: 'Bearer 773b678a8e8939.581e4f5f384a4316a78b99148bdab575'
+              authorization: `Bearer ${underdogKey}`
             }
         };
           
         axios.request(getNftOptions).then(function (response) {
+              console.log(response.data);
+              res.json(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+        
+
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+
+// search if warrior NFTs exist using collection address
+app.get('/warriors/:pId', async(req, res) => {
+    try {
+        const pid = req.params.pId;
+        // const pId = req.params.ProjectId;
+        const searchWarriorNftOptions = {
+            method: 'GET',
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            headers: {
+              accept: 'application/json',
+              authorization: `Bearer ${underdogKey}`
+            }
+        };
+          
+        axios.request(searchWarriorNftOptions).then(function (response) {
               console.log(response.data);
               res.json(response.data);
         }).catch(function (error) {
