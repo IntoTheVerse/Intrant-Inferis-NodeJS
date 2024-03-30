@@ -164,7 +164,7 @@ app.post('/warrior', async(req, res) => {
         console.log(`Description: ${retrieveNFT.data.description}`);
         console.log(`Attributes: HP -> ${retrieveNFT.data.attributes.HP} STM -> ${retrieveNFT.data.attributes.STM}`);
         console.log(`Owner: ${retrieveNFT.data.ownerAddress}`);
-        console.log(`Owner: ${JSON.stringify(retrieveNFT.data)}`);
+        console.log(`Data response: ${JSON.stringify(retrieveNFT.data)}`);
 
 
         // signatures
