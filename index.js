@@ -91,7 +91,7 @@ app.post('/warrior', async(req, res) => {
         console.log(`Description: ${retrieveNFT.data.description}`);
         console.log(`Attributes: HP -> ${retrieveNFT.data.attributes.HP} STM -> ${retrieveNFT.data.attributes.STM}`);
         console.log(`Owner: ${retrieveNFT.data.ownerAddress}`);
-        console.log(`Owner: ${JSON.stringify(retrieveNFT.data)}`);
+        console.log(`NFT Data: ${JSON.stringify(retrieveNFT.data)}`);
 
 
         // signatures
@@ -109,9 +109,13 @@ app.post('/warrior', async(req, res) => {
             }
         )
 
-        res.json(createNftResponse.data.nftId);
-        // res.json(createNftResponse.data.nftId);
+        let warriorData = {
+            "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+            "nftId" : `${createNftResponse.data.nftId}`,
+        }
 
+        res.json(warriorData);
+        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
     
     catch {
