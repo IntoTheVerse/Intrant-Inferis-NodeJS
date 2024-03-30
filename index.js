@@ -49,13 +49,13 @@ const config = {
 
 app.post('/warrior', async(req, res) => {
     try {
-        const { warrior_name, warrior_symbol, warrior_description, warrior_image, warrior_HP, warrior_STM, warrior_receiver } = req.body;
+        const { warrior_receiver } = req.body;
         const nftData = {
-            name : warrior_name,
-            symbol: warrior_symbol,
-            description: warrior_description,
-            image : warrior_image,
-            attributes: {HP: warrior_HP, STM: warrior_STM},
+            name : "Tennon",
+            symbol: "INFERIS",
+            description: "The mighty Tennon",
+            image : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+            attributes: {HP: '150', STM: '150'},
             receiver: {address: warrior_receiver},
             delegated: true
         }
@@ -121,8 +121,29 @@ app.post('/warrior', async(req, res) => {
     catch {
         res.status(500).send(error.message);
     }
-}
-)
+})
+
+app.get('/warrior:id', async(req, res) => {
+    try {
+        const getNftOptions = {
+            method: 'GET',
+            url: 'https://devnet.underdogprotocol.com/v2/projects/40/nfts/10',
+            headers: {
+              accept: 'application/json',
+              authorization: 'Bearer 773b678a8e8939.581e4f5f384a4316a78b99148bdab575'
+            }
+        };
+          
+        axios.request(getNftOptions).then(function (response) {
+              console.log(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
 
     
     const nftData = {
@@ -190,6 +211,8 @@ app.post('/warrior', async(req, res) => {
     }
 
     // mintNft();
+
+    
 
 
 
