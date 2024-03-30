@@ -3,17 +3,17 @@ const express = require('express');
 const app = express();
 const port = 3000;
 const axios = require('axios');
-// app.use(express.json());
+app.use(express.json());
 
 // solana
-const { struct, u32, ns64 } = require("@solana/buffer-layout");
-const { Buffer } = require("buffer");
+// const { struct, u32, ns64 } = require("@solana/buffer-layout");
+// const { Buffer } = require("buffer");
 const web3 = require("@solana/web3.js");
 require('dotenv').config();
 const apiKey = process.env.apikey;
 const underdogKey = process.env.underdogkey
 // underdog API endpoint 
-const underdogApiEndpoint = "https://dev.underdogprotocol.com";
+const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
 const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`
 const connection = new web3.Connection(heliusUrl);
 
@@ -23,38 +23,54 @@ const config = {
     }
 }
 
-const projectData = {
-    "name" : "Intrant Inferis Warriors",
-    "symbol" : "INFERIS",
-    "image" : "https://ibb.co/sVFg2JC"
-}
 
-const nftData = {
-    "name" : "Tennon",
-    "symbol": "INFERIS",
-    "image" : "https://ibb.co/KXWGMPc"
-}
+// sample post request 
+// create warrior nft
 
-// sample get request 
-// /mint_nft \\
+// const nftData = {
+//     name : "Tennon",
+//     symbol: "INFERIS",
+//     description: 'The mighty Tennon',
+//     image : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+//     attributes: {HP: '150', STM: '150'},
+//     receiver: {address: 'Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi'},
+//     delegated: true
+// }
 
-// app.post('/', async(req, res) => {
-    // try {
-        // const id = req.params.player_address;
-        // call the contract
-    async function mintNft()
-    {
+// {
+//     "warrior_name" : "Tennon",
+//     "warrior_symbol" : "INFERIS",
+//     "warrior_description" : "The mighty Tennon",
+//     "warrior_image" : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+//     "warrior_HP": "150",
+//     "warrior_STM": "150",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
+
+app.post('/warrior', async(req, res) => {
+    try {
+        const { warrior_name, warrior_symbol, warrior_description, warrior_image, warrior_HP, warrior_STM, warrior_receiver } = req.body;
+        const nftData = {
+            name : warrior_name,
+            symbol: warrior_symbol,
+            description: warrior_description,
+            image : warrior_image,
+            attributes: {HP: warrior_HP, STM: warrior_STM},
+            receiver: {address: warrior_receiver},
+            delegated: true
+        }
+
         let projectAccountInfo = null;
 
         while (!projectAccountInfo) {
             projectAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("DSwGuRGnVHjUDiTY2grMo5wyDvizrFV6rcUTCsy4KKBQ")
+              new web3.PublicKey("8iwfqhjhWnVE7ABb8pAKTKGvF7Q48hm5EvWCT9e1kPRj")
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
 
         const createNftResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/${1}/nfts`,
+            `${underdogApiEndpoint}/v2/projects/40/nfts`,
             nftData,
             config
         );
@@ -62,17 +78,24 @@ const nftData = {
         let retrieveNFT;
         do {
             retrieveNFT = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/${1}/nfts/${createNftResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/40/nfts/${createNftResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveNFT.data.status !== 'confirmed');
-
+        console.log(`NFT ID: ${createNftResponse.data.nftId}`);
         console.log(`Mint Address: ${retrieveNFT.data.mintAddress}`);
         console.log(`Name: ${retrieveNFT.data.name}`);
+        console.log(`Symbol: ${retrieveNFT.data.symbol}`);
         console.log(`Image: ${retrieveNFT.data.image}`);
+        console.log(`Description: ${retrieveNFT.data.description}`);
+        console.log(`Attributes: HP -> ${retrieveNFT.data.attributes.HP} STM -> ${retrieveNFT.data.attributes.STM}`);
+        console.log(`Owner: ${retrieveNFT.data.ownerAddress}`);
+        console.log(`Owner: ${JSON.stringify(retrieveNFT.data)}`);
 
-        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey(createProjectResponse.data.mintAddress), {
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("8iwfqhjhWnVE7ABb8pAKTKGvF7Q48hm5EvWCT9e1kPRj"), {
             commitment: 'confirmed'
         });
 
@@ -86,21 +109,89 @@ const nftData = {
             }
         )
 
-        console.log(transactionDetails);
+        res.json(createNftResponse.data.nftId);
+        // res.json(createNftResponse.data.nftId);
+
+    } 
+    
+    catch {
+        res.status(500).send(error.message);
+    }
+}
+)
+
+    
+    const nftData = {
+        name : "Tennon",
+        symbol: "INFERIS",
+        description: 'The mighty Tennon',
+        image : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+        attributes: {HP: '150', STM: '150'},
+        receiver: {address: 'Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi'},
+        delegated: true
     }
 
-    mintNft();
+    async function mintNft()
+    {
+        let projectAccountInfo = null;
+
+        while (!projectAccountInfo) {
+            projectAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("DB9rcNFTfysiu8xJmjZuTfMyRyDjBU2dqesSEnKvYfmp")
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        }
+
+        const createNftResponse = await axios.post(
+            `${underdogApiEndpoint}/v2/projects/5/nfts`,
+            nftData,
+            config
+        );
+        
+        let retrieveNFT;
+        do {
+            retrieveNFT = await axios.get(
+                `${underdogApiEndpoint}/v2/projects/5/nfts/${createNftResponse.data.nftId}`,
+                config
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        } while(retrieveNFT.data.status !== 'confirmed');
+        console.log(`NFT ID: ${createNftResponse.data.nftId}`);
+        console.log(`Mint Address: ${retrieveNFT.data.mintAddress}`);
+        console.log(`Name: ${retrieveNFT.data.name}`);
+        console.log(`Symbol: ${retrieveNFT.data.symbol}`);
+        console.log(`Image: ${retrieveNFT.data.image}`);
+        console.log(`Description: ${retrieveNFT.data.description}`);
+        console.log(`Attributes: HP -> ${retrieveNFT.data.attributes.HP} STM -> ${retrieveNFT.data.attributes.STM}`);
+        console.log(`Owner: ${retrieveNFT.data.ownerAddress}`);
+        console.log(`Owner: ${JSON.stringify(retrieveNFT.data)}`);
+
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("DB9rcNFTfysiu8xJmjZuTfMyRyDjBU2dqesSEnKvYfmp"), {
+            commitment: 'confirmed'
+        });
+
+        const transactionDetails = await connection.getParsedTransaction(
+            signatures[0].signature,
+            {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+                maxSupportedTransactionVersion: 0,
+
+            }
+        )
+
+        // console.log("Transaction details: " + JSON.stringify(transactionDetails));
+    }
+
+    // mintNft();
 
 
 
-        // res.send("Here is your unity WebGL application");
-    // console.log(heliusUrl);
 
-    // } catch {
-    //     res.status(500).send(error.message);
-    // }
-// }
-// )
+
+
 // access to keypair 
 // let keypair = web3.Keypair.generate();
 // let payer = web3.Keypair.generate();
@@ -184,6 +275,6 @@ const nftData = {
 // })
 
 
-// app.listen(port, () => {
-//     console.log("API server is listening on port 3000")
-// })
+app.listen(port, () => {
+    console.log("API server is listening on port 3000")
+})
