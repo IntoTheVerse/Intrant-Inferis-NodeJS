@@ -378,7 +378,7 @@ app.post('/asimanabox', async(req, res) => {
 
         while (!asimanaboxAccountInfo) {
             asimanaboxAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu")
+              new web3.PublicKey("3kBNqm4TTgpxJmGhhBQzgMDWVtEkDo4hKQHEzB5cZgk3")
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
@@ -409,7 +409,7 @@ app.post('/asimanabox', async(req, res) => {
 
 
         // signatures
-        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("3kBNqm4TTgpxJmGhhBQzgMDWVtEkDo4hKQHEzB5cZgk3"), {
             commitment: 'confirmed'
         });
 
@@ -471,6 +471,142 @@ app.get('/asimanaboxes/:pId&:playerAddress', async(req, res) => {
 })
 
 
+
+
+
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                                Magical Scroll                              */
+/* -------------------------------------------------------------------------- */
+
+// {
+//     "warrior_name" : "Magical Scroll",
+//     "warrior_symbol" : "SCROLL",
+//     "warrior_description" : "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
+//     "warrior_image" : "https://i.postimg.cc/tTfzGtQW/Union.png",
+//     "color": "white",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
+
+/* ------------------------------ mint magical scroll during collection from the game ------------------------------ */
+
+app.post('/scroll', async(req, res) => {
+    try {
+        const { scroll_receiver } = req.body;
+        const scrolldata = {
+            name : "Magical Scroll",
+            symbol: "SCROLL",
+            description: "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
+            image : "https://i.postimg.cc/tTfzGtQW/Union.png",
+            attributes: {color: 'white'},
+            receiver: {address: scroll_receiver},
+            delegated: true
+        }
+
+        let scrollAccountInfo = null;
+
+        while (!scrollAccountInfo) {
+            scrollAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("87JYTfmZS5FYwLZ8q7mdSd5TCUmZMuNZDvqSvrjcadob")
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        }
+
+        const createScrollResponse = await axios.post(
+            `${underdogApiEndpoint}/v2/projects/44/nfts`,
+            scrolldata,
+            config
+        );
+        
+        let retrieveScroll;
+        do {
+            retrieveScroll = await axios.get(
+                `${underdogApiEndpoint}/v2/projects/44/nfts/${createScrollResponse.data.nftId}`,
+                config
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        } while(retrieveScroll.data.status !== 'confirmed');
+        console.log(`NFT ID: ${createScrollResponse.data.nftId}`);
+        console.log(`Mint Address: ${retrieveScroll.data.mintAddress}`);
+        console.log(`Name: ${retrieveScroll.data.name}`);
+        console.log(`Symbol: ${retrieveScroll.data.symbol}`);
+        console.log(`Image: ${retrieveScroll.data.image}`);
+        console.log(`Description: ${retrieveScroll.data.description}`);
+        console.log(`Attributes: color -> ${retrieveScroll.data.attributes.color}`);
+        console.log(`Owner: ${retrieveScroll.data.ownerAddress}`);
+        console.log(`NFT Data: ${JSON.stringify(retrieveScroll.data)}`);
+
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("87JYTfmZS5FYwLZ8q7mdSd5TCUmZMuNZDvqSvrjcadob"), {
+            commitment: 'confirmed'
+        });
+
+        const transactionDetails = await connection.getParsedTransaction(
+            signatures[0].signature,
+            {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+                maxSupportedTransactionVersion: 0,
+
+            }
+        )
+
+        let scrollData = {
+            "scrollData" : `${(JSON.stringify(retrieveScroll.data))}`,
+            "nftId" : `${createScrollResponse.data.nftId}`,
+        }
+
+        res.json(scrollData);
+        // res.json("mint address: " + retrieveNFT.data.mintAddress);
+    } 
+    
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+/* ------------------------------ search if Magical Scroll NFTs exist using collection address ------------------------------ */
+// pid = 44
+app.get('/scrolls/:pId&:playerAddress', async(req, res) => {
+    try {
+        const pid = req.params.pId;
+        const pAddress = req.params.playerAddress
+        // const pId = req.params.ProjectId;
+        const searchScrollNftOptions = {
+            method: 'GET',
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+            
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            headers: {
+              accept: 'application/json',
+              authorization: `Bearer ${underdogKey}`
+            }
+        };
+          
+        axios.request(searchScrollNftOptions).then(function (response) {
+              console.log(response.data);
+              res.json(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+        
+
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+
+
+
+
+
+
 /* -------------------------------------------------------------------------- */
 /*                                End of Artifacts Code                               */
 /* -------------------------------------------------------------------------- */
@@ -486,12 +622,126 @@ app.get('/asimanaboxes/:pId&:playerAddress', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                Potions' Code                               */
 /* -------------------------------------------------------------------------- */
-
+// {
+//     "warrior_name" : "Fixer Elixir",
+//     "warrior_symbol" : "ELIXIR",
+//     "warrior_description" : "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
+//     "warrior_image" : "https://i.postimg.cc/6qsC1bw4/revival.png",
+//     "color": "purple",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
 /* ------------------------------ mint potion after burning a artifact ------------------------------ */
+
+app.post('/fixerelixir', async(req, res) => {
+    try {
+        const { elixir_receiver } = req.body;
+        const elixirdata = {
+            name : "Fixer Elixir",
+            symbol: "ELIXIR",
+            description: "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
+            image : "https://i.postimg.cc/6qsC1bw4/revival.png",
+            attributes: {color: 'purple'},
+            receiver: {address: elixir_receiver},
+            delegated: true
+        }
+
+        let elixirAccountInfo = null;
+
+        while (!elixirAccountInfo) {
+            elixirAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        }
+
+        const createElixirResponse = await axios.post(
+            `${underdogApiEndpoint}/v2/projects/43/nfts`,
+            elixirdata,
+            config
+        );
+        
+        let retrieveElixir;
+        do {
+            retrieveElixir = await axios.get(
+                `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
+                config
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        } while(retrieveElixir.data.status !== 'confirmed');
+        console.log(`NFT ID: ${createElixirResponse.data.nftId}`);
+        console.log(`Mint Address: ${retrieveElixir.data.mintAddress}`);
+        console.log(`Name: ${retrieveElixir.data.name}`);
+        console.log(`Symbol: ${retrieveElixir.data.symbol}`);
+        console.log(`Image: ${retrieveElixir.data.image}`);
+        console.log(`Description: ${retrieveElixir.data.description}`);
+        console.log(`Attributes: color -> ${retrieveElixir.data.attributes.color}`);
+        console.log(`Owner: ${retrieveElixir.data.ownerAddress}`);
+        console.log(`NFT Data: ${JSON.stringify(retrieveElixir.data)}`);
+
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"), {
+            commitment: 'confirmed'
+        });
+
+        const transactionDetails = await connection.getParsedTransaction(
+            signatures[0].signature,
+            {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+                maxSupportedTransactionVersion: 0,
+
+            }
+        )
+
+        let elixirData = {
+            "elixirData" : `${(JSON.stringify(retrieveElixir.data))}`,
+            "nftId" : `${createElixirResponse.data.nftId}`,
+        }
+
+        res.json(elixirData);
+        // res.json("mint address: " + retrieveNFT.data.mintAddress);
+    } 
+    
+    catch {
+        res.status(500).send(error.message);
+    }
+})
 
 
 /* ------------------------------ search if potions NFTs exist using collection address ------------------------------ */
+// pid = 43
 
+app.get('/fixerelixirs/:pId&:playerAddress', async(req, res) => {
+    try {
+        const pid = req.params.pId;
+        const pAddress = req.params.playerAddress
+        // const pId = req.params.ProjectId;
+        const searchElixirOptions = {
+            method: 'GET',
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+            
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            headers: {
+              accept: 'application/json',
+              authorization: `Bearer ${underdogKey}`
+            }
+        };
+          
+        axios.request(searchElixirOptions).then(function (response) {
+              console.log(response.data);
+              res.json(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+        
+
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
 
 /* ------------------------------ burn potion NFT from collection upon use of potion inside the game ------------------------------ */
 
@@ -518,7 +768,7 @@ app.get('/asimanaboxes/:pId&:playerAddress', async(req, res) => {
 /* ------------------------------ burn powerup NFT from collection upon use of powerup inside the game ------------------------------ */
 
 /* -------------------------------------------------------------------------- */
-/*                                End of Powerups Code                               */
+/*                                End of Powerups Code                        */
 /* -------------------------------------------------------------------------- */
 
 
