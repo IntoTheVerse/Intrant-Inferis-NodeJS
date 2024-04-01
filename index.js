@@ -338,6 +338,8 @@ app.get('/theracodes/:pId&:playerAddress', async(req, res) => {
     }
 })
 
+
+
 /* ------------------------------ burn Theracode NFT from collection upon use to make potions or powerups ------------------------------ */
 
 /* -------------------------------------------------------------------------- */
@@ -350,16 +352,123 @@ app.get('/theracodes/:pId&:playerAddress', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 
 // {
-//     "warrior_name" : "Theracode",
-//     "warrior_symbol" : "THERACODE",
-//     "warrior_description" : "Floating Theracode that reveals binary numbers.",
-//     "warrior_image" : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
-//     "color": "blue",
+//     "warrior_name" : "Asimana Box",
+//     "warrior_symbol" : "ASIMANA",
+//     "warrior_description" : "Glowing mini Asimana Boxes hide the artifacts. ",
+//     "warrior_image" : "https://i.postimg.cc/pVqCrpc7/asimana.png",
+//     "color": "yellow",
 //     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
 // }
 
-/* ------------------------------ mint theracode during collection from the game ------------------------------ */
+/* ------------------------------ mint asimana box during collection from the game ------------------------------ */
+app.post('/asimanabox', async(req, res) => {
+    try {
+        const { asimanabox_receiver } = req.body;
+        const asimanaboxdata = {
+            name : "Asimana Box",
+            symbol: "ASIMANA",
+            description: "Glowing mini Asimana Boxes hide the artifacts. ",
+            image : "https://i.postimg.cc/pVqCrpc7/asimana.png",
+            attributes: {color: 'yellow'},
+            receiver: {address: asimanabox_receiver},
+            delegated: true
+        }
 
+        let asimanaboxAccountInfo = null;
+
+        while (!asimanaboxAccountInfo) {
+            asimanaboxAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu")
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        }
+
+        const createAsimanaBoxResponse = await axios.post(
+            `${underdogApiEndpoint}/v2/projects/42/nfts`,
+            asimanaboxdata,
+            config
+        );
+        
+        let retrieveAsimanaBox;
+        do {
+            retrieveAsimanaBox = await axios.get(
+                `${underdogApiEndpoint}/v2/projects/42/nfts/${createAsimanaBoxResponse.data.nftId}`,
+                config
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        } while(retrieveAsimanaBox.data.status !== 'confirmed');
+        console.log(`NFT ID: ${createAsimanaBoxResponse.data.nftId}`);
+        console.log(`Mint Address: ${retrieveAsimanaBox.data.mintAddress}`);
+        console.log(`Name: ${retrieveAsimanaBox.data.name}`);
+        console.log(`Symbol: ${retrieveAsimanaBox.data.symbol}`);
+        console.log(`Image: ${retrieveAsimanaBox.data.image}`);
+        console.log(`Description: ${retrieveAsimanaBox.data.description}`);
+        console.log(`Attributes: color -> ${retrieveAsimanaBox.data.attributes.color}`);
+        console.log(`Owner: ${retrieveAsimanaBox.data.ownerAddress}`);
+        console.log(`NFT Data: ${JSON.stringify(retrieveAsimanaBox.data)}`);
+
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
+            commitment: 'confirmed'
+        });
+
+        const transactionDetails = await connection.getParsedTransaction(
+            signatures[0].signature,
+            {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+                maxSupportedTransactionVersion: 0,
+
+            }
+        )
+
+        let asimanaboxData = {
+            "asimanaboxData" : `${(JSON.stringify(retrieveAsimanaBox.data))}`,
+            "nftId" : `${createAsimanaBoxResponse.data.nftId}`,
+        }
+
+        res.json(asimanaboxData);
+        // res.json("mint address: " + retrieveNFT.data.mintAddress);
+    } 
+    
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+/* ------------------------------ search if asimana box NFTs exist using collection address ------------------------------ */
+// pid = 42
+app.get('/asimanaboxes/:pId&:playerAddress', async(req, res) => {
+    try {
+        const pid = req.params.pId;
+        const pAddress = req.params.playerAddress
+        // const pId = req.params.ProjectId;
+        const searchAsimanaBoxNftOptions = {
+            method: 'GET',
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+            
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            headers: {
+              accept: 'application/json',
+              authorization: `Bearer ${underdogKey}`
+            }
+        };
+          
+        axios.request(searchAsimanaBoxNftOptions).then(function (response) {
+              console.log(response.data);
+              res.json(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+        
+
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
 
 
 /* -------------------------------------------------------------------------- */
