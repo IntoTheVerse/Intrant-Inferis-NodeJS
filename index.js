@@ -155,14 +155,17 @@ app.get('/warrior/:NftId', async(req, res) => {
 
 
 // search if warrior NFTs exist using collection address
-app.get('/warriors/:pId', async(req, res) => {
+app.get('/warriors/:pId&:playerAddress', async(req, res) => {
     try {
         const pid = req.params.pId;
+        const pAddress = req.params.playerAddress
         // const pId = req.params.ProjectId;
         const searchWarriorNftOptions = {
             method: 'GET',
             // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+            
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
             headers: {
               accept: 'application/json',
               authorization: `Bearer ${underdogKey}`
