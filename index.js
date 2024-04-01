@@ -167,11 +167,7 @@ app.get('/warrior/:NftId', async(req, res) => {
 
 /* ------------------------------ search if warrior NFTs exist using collection address ------------------------------ */
 
-/* -------------------------------------------------------------------------- */
-/*                                End of Warrior Code                               */
-/* -------------------------------------------------------------------------- */
-
-
+// pid = 40
 app.get('/warriors/:pId&:playerAddress', async(req, res) => {
     try {
         const pid = req.params.pId;
@@ -202,6 +198,12 @@ app.get('/warriors/:pId&:playerAddress', async(req, res) => {
         res.status(500).send(error.message);
     }
 })
+/* -------------------------------------------------------------------------- */
+/*                                End of Warrior Code                               */
+/* -------------------------------------------------------------------------- */
+
+
+
 
 
 
@@ -212,11 +214,153 @@ app.get('/warriors/:pId&:playerAddress', async(req, res) => {
 /*                                Artifacts Code                               */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------------ mint artifacts during collection from the game ------------------------------ */
+/* -------------------------------------------------------------------------- */
+/*                                Theracode                               */
+/* -------------------------------------------------------------------------- */
 
-/* ------------------------------ search if artifact NFTs exist using collection address ------------------------------ */
+// {
+//     "warrior_name" : "Theracode",
+//     "warrior_symbol" : "THERACODE",
+//     "warrior_description" : "Floating Theracode that reveals binary numbers.",
+//     "warrior_image" : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
+//     "color": "blue",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
 
-/* ------------------------------ burn artifact NFT from collection upon use to make potions or powerups ------------------------------ */
+/* ------------------------------ mint theracode during collection from the game ------------------------------ */
+
+app.post('/theracode', async(req, res) => {
+    try {
+        const { theracode_receiver } = req.body;
+        const theracodedata = {
+            name : "Theracode",
+            symbol: "THERACODE",
+            description: "Floating Theracode that reveals binary numbers.",
+            image : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
+            attributes: {color: 'blue'},
+            receiver: {address: theracode_receiver},
+            delegated: true
+        }
+
+        let theracodeAccountInfo = null;
+
+        while (!theracodeAccountInfo) {
+            theracodeAccountInfo = await connection.getAccountInfo(
+              new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu")
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        }
+
+        const createTheracodeResponse = await axios.post(
+            `${underdogApiEndpoint}/v2/projects/41/nfts`,
+            theracodedata,
+            config
+        );
+        
+        let retrieveTheracode;
+        do {
+            retrieveTheracode = await axios.get(
+                `${underdogApiEndpoint}/v2/projects/41/nfts/${createTheracodeResponse.data.nftId}`,
+                config
+            );
+            await new Promise( resolve => setTimeout(resolve, 100));
+        } while(retrieveTheracode.data.status !== 'confirmed');
+        console.log(`NFT ID: ${createTheracodeResponse.data.nftId}`);
+        console.log(`Mint Address: ${retrieveTheracode.data.mintAddress}`);
+        console.log(`Name: ${retrieveTheracode.data.name}`);
+        console.log(`Symbol: ${retrieveTheracode.data.symbol}`);
+        console.log(`Image: ${retrieveTheracode.data.image}`);
+        console.log(`Description: ${retrieveTheracode.data.description}`);
+        console.log(`Attributes: color -> ${retrieveTheracode.data.attributes.color}`);
+        console.log(`Owner: ${retrieveTheracode.data.ownerAddress}`);
+        console.log(`NFT Data: ${JSON.stringify(retrieveTheracode.data)}`);
+
+
+        // signatures
+        const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
+            commitment: 'confirmed'
+        });
+
+        const transactionDetails = await connection.getParsedTransaction(
+            signatures[0].signature,
+            {
+                commitment: "confirmed",
+                encoding: "jsonParsed",
+                maxSupportedTransactionVersion: 0,
+
+            }
+        )
+
+        let theracodeData = {
+            "theracodeData" : `${(JSON.stringify(retrieveTheracode.data))}`,
+            "nftId" : `${createTheracodeResponse.data.nftId}`,
+        }
+
+        res.json(theracodeData);
+        // res.json("mint address: " + retrieveNFT.data.mintAddress);
+    } 
+    
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+/* ------------------------------ search if Theracode NFTs exist using collection address ------------------------------ */
+// pid = 41
+app.get('/theracodes/:pId&:playerAddress', async(req, res) => {
+    try {
+        const pid = req.params.pId;
+        const pAddress = req.params.playerAddress
+        // const pId = req.params.ProjectId;
+        const searchTheracodeNftOptions = {
+            method: 'GET',
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
+            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+            
+            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
+            headers: {
+              accept: 'application/json',
+              authorization: `Bearer ${underdogKey}`
+            }
+        };
+          
+        axios.request(searchTheracodeNftOptions).then(function (response) {
+              console.log(response.data);
+              res.json(response.data);
+        }).catch(function (error) {
+            console.error(error);
+        });
+        
+
+    }
+    catch {
+        res.status(500).send(error.message);
+    }
+})
+
+/* ------------------------------ burn Theracode NFT from collection upon use to make potions or powerups ------------------------------ */
+
+/* -------------------------------------------------------------------------- */
+/*                                End of Theracode                               */
+/* -------------------------------------------------------------------------- */
+
+
+/* -------------------------------------------------------------------------- */
+/*                                AsimanaBox                              */
+/* -------------------------------------------------------------------------- */
+
+// {
+//     "warrior_name" : "Theracode",
+//     "warrior_symbol" : "THERACODE",
+//     "warrior_description" : "Floating Theracode that reveals binary numbers.",
+//     "warrior_image" : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
+//     "color": "blue",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
+
+/* ------------------------------ mint theracode during collection from the game ------------------------------ */
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Artifacts Code                               */
