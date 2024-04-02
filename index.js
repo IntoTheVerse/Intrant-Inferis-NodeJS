@@ -33,6 +33,7 @@ const AllBuyableWarriors = [
   },
 ];
 
+
 /* -------------------------------------------------------------------------- */
 /*                                Search Code                               */
 /* -------------------------------------------------------------------------- */
@@ -186,7 +187,7 @@ app.post('/warrior', async(req, res) => {
 
         res.json(warriorData);
     } 
-    catch {
+    catch (error) {
         res.status(500).send(error.message);
     }
 })
