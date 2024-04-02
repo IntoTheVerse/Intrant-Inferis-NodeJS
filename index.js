@@ -6,15 +6,14 @@ const axios = require('axios');
 app.use(express.json());
 
 // solana
-// const { struct, u32, ns64 } = require("@solana/buffer-layout");
-// const { Buffer } = require("buffer");
 const web3 = require("@solana/web3.js");
 require('dotenv').config();
 const apiKey = process.env.apikey;
-const underdogKey = process.env.underdogkey
+const underdogKey = process.env.underdogkey;
+
 // underdog API endpoint 
 const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
-const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`
+const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
 
 const config = {
@@ -23,49 +22,123 @@ const config = {
     }
 }
 
-
-// sample post request 
-// create warrior nft
-
-// const nftData = {
-//     name : "Tennon",
-//     symbol: "INFERIS",
-//     description: 'The mighty Tennon',
-//     image : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-//     attributes: {HP: '150', STM: '150'},
-//     receiver: {address: 'Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi'},
-//     delegated: true
-// }
-
-// {
-//     "warrior_name" : "Tennon",
-//     "warrior_symbol" : "INFERIS",
-//     "warrior_description" : "The mighty Tennon",
-//     "warrior_image" : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-//     "warrior_HP": "150",
-//     "warrior_STM": "150",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
+const AllBuyableWarriors = [
+  {
+    name: "Tennon",
+    description: "The mighty Tennon",
+    image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+    attributes: { HP: "150", STM: "150" },
+    inferis: 50,
+    characterId : 0
+  },
+];
 
 /* -------------------------------------------------------------------------- */
-/*                                Warrior Code                               */
+/*                                Search Code                               */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------------ mint warrior ------------------------------ */
+/* ------------------------------ Search By NFTId ------------------------------ */
+
+app.get("/searchByNFTId/:pId&:NftId", async (req, res) => {
+  try {
+    const nftId = req.params.NftId;
+    const pId = req.params.pId;
+    const getNftOptions = {
+      method: "GET",
+      url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftId}`,
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${underdogKey}`,
+      },
+    };
+
+    axios
+      .request(getNftOptions)
+      .then(function (response) {
+        console.log(response.data);
+        res.json(response.data);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
+
+/* ------------------------------ Get Collection By Owner ------------------------------ */
+
+app.get("/getCollectionByOwner/:pId&:playerAddress", async (req, res) => {
+  try {
+    const pid = req.params.pId;
+    const pAddress = req.params.playerAddress;
+    const searchWarriorNftOptions = {
+      method: "GET",
+      url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${underdogKey}`,
+      },
+    };
+
+    axios
+      .request(searchWarriorNftOptions)
+      .then(function (response) {
+        console.log(response.data);
+        res.json(response.data);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                End of Search Code                         */
+/* -------------------------------------------------------------------------- */
+
+
+/* -------------------------------------------------------------------------- */
+/*                                Get All Default Code                        */
+/* -------------------------------------------------------------------------- */
+
+app.get("/getAllBuyableWarriors", async (req, res) => { 
+    try {
+        res.json(AllBuyableWarriors);
+    } catch {
+      res.status(500).send(error.message);
+    }
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                End of Get All Default Code                 */
+/* -------------------------------------------------------------------------- */
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                                Warrior Code                                */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ Mint Warrior ------------------------------ */
 
 
 app.post('/warrior', async(req, res) => {
     try {
-        const { warrior_receiver } = req.body;
+        const { warrior_receiver, characterId } = req.body;
+        const character = AllBuyableWarriors[characterId];
+
         const nftData = {
-            name : "Tennon",
-            symbol: "INFERIS",
-            description: "The mighty Tennon",
-            image : "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-            attributes: {HP: '150', STM: '150'},
-            receiver: {address: warrior_receiver},
-            delegated: true
-        }
+          name: character.name,
+          symbol: "INFERIS",
+          description: character.description,
+          image: character.image,
+          attributes: character.attributes,
+          receiver: { address: warrior_receiver },
+          delegated: true,
+        };
 
         let projectAccountInfo = null;
 
@@ -90,16 +163,6 @@ app.post('/warrior', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveNFT.data.status !== 'confirmed');
-        console.log(`NFT ID: ${createNftResponse.data.nftId}`);
-        console.log(`Mint Address: ${retrieveNFT.data.mintAddress}`);
-        console.log(`Name: ${retrieveNFT.data.name}`);
-        console.log(`Symbol: ${retrieveNFT.data.symbol}`);
-        console.log(`Image: ${retrieveNFT.data.image}`);
-        console.log(`Description: ${retrieveNFT.data.description}`);
-        console.log(`Attributes: HP -> ${retrieveNFT.data.attributes.HP} STM -> ${retrieveNFT.data.attributes.STM}`);
-        console.log(`Owner: ${retrieveNFT.data.ownerAddress}`);
-        console.log(`NFT Data: ${JSON.stringify(retrieveNFT.data)}`);
-
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("8iwfqhjhWnVE7ABb8pAKTKGvF7Q48hm5EvWCT9e1kPRj"), {
@@ -122,88 +185,19 @@ app.post('/warrior', async(req, res) => {
         }
 
         res.json(warriorData);
-        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
-    
     catch {
         res.status(500).send(error.message);
     }
 })
-
-/* ------------------------------ search warrior by NFTID ------------------------------ */
-
-// app.get('/warrior:ProjectId&:NftId', async(req, res) => {
-app.get('/warrior/:NftId', async(req, res) => {
-    try {
-        const nftid = req.params.NftId;
-        // const pId = req.params.ProjectId;
-        const getNftOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/40/nfts/${nftid}`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(getNftOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
-    catch {
-        res.status(500).send(error.message);
-    }
-})
-
 
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
 
 
-/* ------------------------------ search if warrior NFTs exist using collection address ------------------------------ */
 
-// pid = 40
-app.get('/warriors/:pId&:playerAddress', async(req, res) => {
-    try {
-        const pid = req.params.pId;
-        const pAddress = req.params.playerAddress
-        // const pId = req.params.ProjectId;
-        const searchWarriorNftOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
-            
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(searchWarriorNftOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
-    catch {
-        res.status(500).send(error.message);
-    }
-})
 /* -------------------------------------------------------------------------- */
-/*                                End of Warrior Code                               */
+/*                                End of Warrior Code                         */
 /* -------------------------------------------------------------------------- */
-
-
-
 
 
 
@@ -265,16 +259,15 @@ app.post('/theracode', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveTheracode.data.status !== 'confirmed');
-        console.log(`NFT ID: ${createTheracodeResponse.data.nftId}`);
-        console.log(`Mint Address: ${retrieveTheracode.data.mintAddress}`);
-        console.log(`Name: ${retrieveTheracode.data.name}`);
-        console.log(`Symbol: ${retrieveTheracode.data.symbol}`);
-        console.log(`Image: ${retrieveTheracode.data.image}`);
-        console.log(`Description: ${retrieveTheracode.data.description}`);
-        console.log(`Attributes: color -> ${retrieveTheracode.data.attributes.color}`);
-        console.log(`Owner: ${retrieveTheracode.data.ownerAddress}`);
-        console.log(`NFT Data: ${JSON.stringify(retrieveTheracode.data)}`);
-
+        // console.log(`NFT ID: ${createTheracodeResponse.data.nftId}`);
+        // console.log(`Mint Address: ${retrieveTheracode.data.mintAddress}`);
+        // console.log(`Name: ${retrieveTheracode.data.name}`);
+        // console.log(`Symbol: ${retrieveTheracode.data.symbol}`);
+        // console.log(`Image: ${retrieveTheracode.data.image}`);
+        // console.log(`Description: ${retrieveTheracode.data.description}`);
+        // console.log(`Attributes: color -> ${retrieveTheracode.data.attributes.color}`);
+        // console.log(`Owner: ${retrieveTheracode.data.ownerAddress}`);
+        // console.log(`NFT Data: ${JSON.stringify(retrieveTheracode.data)}`);
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
@@ -297,48 +290,11 @@ app.post('/theracode', async(req, res) => {
         }
 
         res.json(theracodeData);
-        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
-    
     catch {
         res.status(500).send(error.message);
     }
 })
-
-/* ------------------------------ search if Theracode NFTs exist using collection address ------------------------------ */
-// pid = 41
-app.get('/theracodes/:pId&:playerAddress', async(req, res) => {
-    try {
-        const pid = req.params.pId;
-        const pAddress = req.params.playerAddress
-        // const pId = req.params.ProjectId;
-        const searchTheracodeNftOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
-            
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(searchTheracodeNftOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
-    catch {
-        res.status(500).send(error.message);
-    }
-})
-
-
 
 /* ------------------------------ burn Theracode NFT from collection upon use to make potions or powerups ------------------------------ */
 
@@ -397,16 +353,6 @@ app.post('/asimanabox', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveAsimanaBox.data.status !== 'confirmed');
-        console.log(`NFT ID: ${createAsimanaBoxResponse.data.nftId}`);
-        console.log(`Mint Address: ${retrieveAsimanaBox.data.mintAddress}`);
-        console.log(`Name: ${retrieveAsimanaBox.data.name}`);
-        console.log(`Symbol: ${retrieveAsimanaBox.data.symbol}`);
-        console.log(`Image: ${retrieveAsimanaBox.data.image}`);
-        console.log(`Description: ${retrieveAsimanaBox.data.description}`);
-        console.log(`Attributes: color -> ${retrieveAsimanaBox.data.attributes.color}`);
-        console.log(`Owner: ${retrieveAsimanaBox.data.ownerAddress}`);
-        console.log(`NFT Data: ${JSON.stringify(retrieveAsimanaBox.data)}`);
-
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("3kBNqm4TTgpxJmGhhBQzgMDWVtEkDo4hKQHEzB5cZgk3"), {
@@ -429,52 +375,11 @@ app.post('/asimanabox', async(req, res) => {
         }
 
         res.json(asimanaboxData);
-        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
-    
     catch {
         res.status(500).send(error.message);
     }
 })
-
-/* ------------------------------ search if asimana box NFTs exist using collection address ------------------------------ */
-// pid = 42
-app.get('/asimanaboxes/:pId&:playerAddress', async(req, res) => {
-    try {
-        const pid = req.params.pId;
-        const pAddress = req.params.playerAddress
-        // const pId = req.params.ProjectId;
-        const searchAsimanaBoxNftOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
-            
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(searchAsimanaBoxNftOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
-    catch {
-        res.status(500).send(error.message);
-    }
-})
-
-
-
-
-
-
 
 
 /* -------------------------------------------------------------------------- */
@@ -528,16 +433,6 @@ app.post('/scroll', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveScroll.data.status !== 'confirmed');
-        console.log(`NFT ID: ${createScrollResponse.data.nftId}`);
-        console.log(`Mint Address: ${retrieveScroll.data.mintAddress}`);
-        console.log(`Name: ${retrieveScroll.data.name}`);
-        console.log(`Symbol: ${retrieveScroll.data.symbol}`);
-        console.log(`Image: ${retrieveScroll.data.image}`);
-        console.log(`Description: ${retrieveScroll.data.description}`);
-        console.log(`Attributes: color -> ${retrieveScroll.data.attributes.color}`);
-        console.log(`Owner: ${retrieveScroll.data.ownerAddress}`);
-        console.log(`NFT Data: ${JSON.stringify(retrieveScroll.data)}`);
-
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("87JYTfmZS5FYwLZ8q7mdSd5TCUmZMuNZDvqSvrjcadob"), {
@@ -560,62 +455,15 @@ app.post('/scroll', async(req, res) => {
         }
 
         res.json(scrollData);
-        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
-    
     catch {
         res.status(500).send(error.message);
     }
 })
 
-/* ------------------------------ search if Magical Scroll NFTs exist using collection address ------------------------------ */
-// pid = 44
-app.get('/scrolls/:pId&:playerAddress', async(req, res) => {
-    try {
-        const pid = req.params.pId;
-        const pAddress = req.params.playerAddress
-        // const pId = req.params.ProjectId;
-        const searchScrollNftOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
-            
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(searchScrollNftOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
-    catch {
-        res.status(500).send(error.message);
-    }
-})
-
-
-
-
-
-
-
 /* -------------------------------------------------------------------------- */
-/*                                End of Artifacts Code                               */
+/*                                End of Artifacts Code                       */
 /* -------------------------------------------------------------------------- */
-
-
-
-
-
-
 
 
 
@@ -668,16 +516,6 @@ app.post('/fixerelixir', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveElixir.data.status !== 'confirmed');
-        console.log(`NFT ID: ${createElixirResponse.data.nftId}`);
-        console.log(`Mint Address: ${retrieveElixir.data.mintAddress}`);
-        console.log(`Name: ${retrieveElixir.data.name}`);
-        console.log(`Symbol: ${retrieveElixir.data.symbol}`);
-        console.log(`Image: ${retrieveElixir.data.image}`);
-        console.log(`Description: ${retrieveElixir.data.description}`);
-        console.log(`Attributes: color -> ${retrieveElixir.data.attributes.color}`);
-        console.log(`Owner: ${retrieveElixir.data.ownerAddress}`);
-        console.log(`NFT Data: ${JSON.stringify(retrieveElixir.data)}`);
-
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"), {
@@ -700,44 +538,7 @@ app.post('/fixerelixir', async(req, res) => {
         }
 
         res.json(elixirData);
-        // res.json("mint address: " + retrieveNFT.data.mintAddress);
     } 
-    
-    catch {
-        res.status(500).send(error.message);
-    }
-})
-
-
-/* ------------------------------ search if potions NFTs exist using collection address ------------------------------ */
-// pid = 43
-
-app.get('/fixerelixirs/:pId&:playerAddress', async(req, res) => {
-    try {
-        const pid = req.params.pId;
-        const pAddress = req.params.playerAddress
-        // const pId = req.params.ProjectId;
-        const searchElixirOptions = {
-            method: 'GET',
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftid}`,
-            url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
-            
-            // url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100`,
-            headers: {
-              accept: 'application/json',
-              authorization: `Bearer ${underdogKey}`
-            }
-        };
-          
-        axios.request(searchElixirOptions).then(function (response) {
-              console.log(response.data);
-              res.json(response.data);
-        }).catch(function (error) {
-            console.error(error);
-        });
-        
-
-    }
     catch {
         res.status(500).send(error.message);
     }
@@ -748,12 +549,6 @@ app.get('/fixerelixirs/:pId&:playerAddress', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                End of Potions Code                               */
 /* -------------------------------------------------------------------------- */
-
-
-
-
-
-
 
 
 
@@ -770,14 +565,6 @@ app.get('/fixerelixirs/:pId&:playerAddress', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                End of Powerups Code                        */
 /* -------------------------------------------------------------------------- */
-
-
-
-
-
-
-
-
 
 
 
