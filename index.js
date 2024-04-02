@@ -23,15 +23,91 @@ const config = {
 }
 
 const AllBuyableWarriors = [
-  {
-    name: "Tennon",
-    description: "The mighty Tennon",
-    image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-    attributes: { HP: "150", STM: "150" },
-    inferis: 50,
-    characterId : 0
-  },
-];
+    {
+      name: "Tennon",
+      description: "The mighty Tennon",
+      image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+      attributes: { HP: "150", STM: "150" },
+      inferis: 50,
+      characterId : 0
+    },
+  ];
+
+//   const character = AllBuyableWarriors[];
+//   console.log(character);
+
+// {
+//     "warrior_name" : "Fixer Elixir",
+//     "warrior_symbol" : "ELIXIR",
+//     "warrior_description" : "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
+//     "warrior_image" : "https://i.postimg.cc/6qsC1bw4/revival.png",
+//     "color": "purple",
+//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
+const AllBuyablePotions = [
+    {
+      name: "Fixer Elixir",
+      description: "The Fixer Elixir gives a warrior an instant return to stamina/full health",
+      image: "https://i.postimg.cc/6qsC1bw4/revival.png",
+      attributes: { color: "blue" },
+      potionId : 0,
+      required : [{
+          item: 41,
+          value: 1
+      },
+      {
+          item: 42,
+          value: 1
+      },
+      {
+          item: 44,
+          value: 1
+      }
+    ]
+    },
+  ];
+
+// Async helper function to burn asset by collection ID and assetID
+async function burnAsset(assetcollectionId, assetId) {
+    const options = {
+        method: 'POST',
+        url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/${assetId}/burn`,
+        headers: {
+          accept: 'application/json',
+          authorization: `Bearer ${underdogKey}`
+        }
+    };
+      
+      axios
+        .request(options)
+        .then(function (response) {
+          console.log(response.data);
+        })
+        .catch(function (error) {
+          console.error(error);
+        });
+}
+
+// helper searchAssetFromCollection function to be called inside API requests, to return NFTs by project id to fetch response and store nftIds in array to help with burn logic 
+async function searchAssetsFromCollection(assetcollectionId, playerAddress) {
+    const options = {
+        method: 'POST',
+        url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/search?page=1&limit=100&search=${playerAddress}`,
+        headers: {
+          accept: 'application/json',
+          authorization: `Bearer ${underdogKey}`
+        }
+    };
+      
+      axios
+        .request(options)
+        .then(function (response) {
+          console.log(response.data);
+        })
+        .catch(function (error) {
+          console.error(error);
+        });
+}
 
 
 /* -------------------------------------------------------------------------- */
@@ -164,6 +240,8 @@ app.post('/warrior', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveNFT.data.status !== 'confirmed');
+        // console.log(`NFT ID: ${createNftResponse.data.nftId}`);
+        // console.log(`NFT Data: ${JSON.stringify(retrieveNFT.data)}`);
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("8iwfqhjhWnVE7ABb8pAKTKGvF7Q48hm5EvWCT9e1kPRj"), {
@@ -184,6 +262,8 @@ app.post('/warrior', async(req, res) => {
             "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
             "nftId" : `${createNftResponse.data.nftId}`,
         }
+        console.log(warriorData);
+
 
         res.json(warriorData);
     } 
@@ -483,13 +563,14 @@ app.post('/scroll', async(req, res) => {
 
 app.post('/fixerelixir', async(req, res) => {
     try {
-        const { elixir_receiver } = req.body;
+        const { elixir_receiver, potionId } = req.body;
+        const potion = AllBuyablePotions[potionId];
         const elixirdata = {
-            name : "Fixer Elixir",
+            name : potion.name,
             symbol: "ELIXIR",
-            description: "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
-            image : "https://i.postimg.cc/6qsC1bw4/revival.png",
-            attributes: {color: 'purple'},
+            description: potion.description,
+            image : potion.image,
+            attributes: potion.attributes,
             receiver: {address: elixir_receiver},
             delegated: true
         }
