@@ -28,40 +28,29 @@ const AllBuyableWarriors = [
       description: "The mighty Tennon",
       image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
       attributes: { HP: "150", STM: "150" },
-      inferis: 50,
+      inferis: 20,
       characterId : 0
     },
   ];
 
-//   const character = AllBuyableWarriors[];
-//   console.log(character);
-
-// {
-//     "warrior_name" : "Fixer Elixir",
-//     "warrior_symbol" : "ELIXIR",
-//     "warrior_description" : "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
-//     "warrior_image" : "https://i.postimg.cc/6qsC1bw4/revival.png",
-//     "color": "purple",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
 const AllBuyablePotions = [
     {
       name: "Fixer Elixir",
       description: "The Fixer Elixir gives a warrior an instant return to stamina/full health",
       image: "https://i.postimg.cc/6qsC1bw4/revival.png",
-      attributes: { color: "blue" },
+      attributes: { color: "Blue" },
       potionId : 0,
       required : [{
-          item: 41,
-          value: 1
+        item: 41,
+        value: 1
       },
       {
-          item: 42,
-          value: 1
+        item: 42,
+        value: 1
       },
       {
-          item: 44,
-          value: 1
+        item: 44,
+        value: 1
       }
     ]
     },
@@ -189,6 +178,14 @@ app.get("/getAllBuyableWarriors", async (req, res) => {
     }
 });
 
+app.get("/getAllBuyablePotions", async (req, res) => {
+  try {
+    res.json(AllBuyablePotions);
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
+
 /* -------------------------------------------------------------------------- */
 /*                                End of Get All Default Code                 */
 /* -------------------------------------------------------------------------- */
@@ -306,16 +303,16 @@ app.post('/warrior', async(req, res) => {
 
 app.post('/theracode', async(req, res) => {
     try {
-        const { theracode_receiver } = req.body;
+        const { receiver } = req.body;
         const theracodedata = {
-            name : "Theracode",
-            symbol: "THERACODE",
-            description: "Floating Theracode that reveals binary numbers.",
-            image : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
-            attributes: {color: 'blue'},
-            receiver: {address: theracode_receiver},
-            delegated: true
-        }
+          name: "Theracode",
+          symbol: "THERACODE",
+          description: "Floating Theracode that reveals binary numbers.",
+          image: "https://i.postimg.cc/YCgY7ZB8/theracode.png",
+          attributes: { color: "blue" },
+          receiver: { address: receiver },
+          delegated: true,
+        };
 
         let theracodeAccountInfo = null;
 
@@ -400,16 +397,16 @@ app.post('/theracode', async(req, res) => {
 /* ------------------------------ mint asimana box during collection from the game ------------------------------ */
 app.post('/asimanabox', async(req, res) => {
     try {
-        const { asimanabox_receiver } = req.body;
+        const { receiver } = req.body;
         const asimanaboxdata = {
-            name : "Asimana Box",
-            symbol: "ASIMANA",
-            description: "Glowing mini Asimana Boxes hide the artifacts. ",
-            image : "https://i.postimg.cc/pVqCrpc7/asimana.png",
-            attributes: {color: 'yellow'},
-            receiver: {address: asimanabox_receiver},
-            delegated: true
-        }
+          name: "Asimana Box",
+          symbol: "ASIMANA",
+          description: "Glowing mini Asimana Boxes hide the artifacts. ",
+          image: "https://i.postimg.cc/pVqCrpc7/asimana.png",
+          attributes: { color: "yellow" },
+          receiver: { address: receiver },
+          delegated: true,
+        };
 
         let asimanaboxAccountInfo = null;
 
@@ -480,16 +477,17 @@ app.post('/asimanabox', async(req, res) => {
 
 app.post('/scroll', async(req, res) => {
     try {
-        const { scroll_receiver } = req.body;
+        const { receiver } = req.body;
         const scrolldata = {
-            name : "Magical Scroll",
-            symbol: "SCROLL",
-            description: "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
-            image : "https://i.postimg.cc/tTfzGtQW/Union.png",
-            attributes: {color: 'white'},
-            receiver: {address: scroll_receiver},
-            delegated: true
-        }
+          name: "Magical Scroll",
+          symbol: "SCROLL",
+          description:
+            "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
+          image: "https://i.postimg.cc/tTfzGtQW/Union.png",
+          attributes: { color: "white" },
+          receiver: { address: receiver },
+          delegated: true,
+        };
 
         let scrollAccountInfo = null;
 
