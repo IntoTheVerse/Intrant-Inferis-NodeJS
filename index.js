@@ -602,7 +602,7 @@ app.post('/scroll', async(req, res) => {
 // }
 /* ------------------------------ mint potion after burning a artifact ------------------------------ */
 
-app.post('/potion', async(req, res) => {
+app.post('/fixerelixir', async(req, res) => {
     try {
         const { receiver, id } = req.body;
         const potion = AllBuyablePotions[id];
