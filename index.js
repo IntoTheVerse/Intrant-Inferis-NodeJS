@@ -39,7 +39,8 @@ const AllBuyablePotions = [
       description: "The Fixer Elixir gives a warrior an instant return to stamina/full health",
       image: "https://i.postimg.cc/6qsC1bw4/revival.png",
       attributes: { color: "Blue" },
-      potionId : 0,
+      potionId: 0,
+      inferis: 20,
       required : [{
         item: 41,
         value: 1
@@ -201,8 +202,8 @@ app.get("/getAllBuyablePotions", async (req, res) => {
 
 app.post('/warrior', async(req, res) => {
     try {
-        const { warrior_receiver, characterId } = req.body;
-        const character = AllBuyableWarriors[characterId];
+        const { receiver, id } = req.body;
+        const character = AllBuyableWarriors[id];
 
         const nftData = {
           name: character.name,
@@ -210,7 +211,7 @@ app.post('/warrior', async(req, res) => {
           description: character.description,
           image: character.image,
           attributes: character.attributes,
-          receiver: { address: warrior_receiver },
+          receiver: { address: receiver },
           delegated: true,
         };
 
@@ -561,17 +562,17 @@ app.post('/scroll', async(req, res) => {
 
 app.post('/fixerelixir', async(req, res) => {
     try {
-        const { elixir_receiver, potionId } = req.body;
-        const potion = AllBuyablePotions[potionId];
+        const { receiver, id } = req.body;
+        const potion = AllBuyablePotions[id];
         const elixirdata = {
-            name : potion.name,
-            symbol: "ELIXIR",
-            description: potion.description,
-            image : potion.image,
-            attributes: potion.attributes,
-            receiver: {address: elixir_receiver},
-            delegated: true
-        }
+          name: potion.name,
+          symbol: "ELIXIR",
+          description: potion.description,
+          image: potion.image,
+          attributes: potion.attributes,
+          receiver: { address: receiver },
+          delegated: true,
+        };
 
         let elixirAccountInfo = null;
 
