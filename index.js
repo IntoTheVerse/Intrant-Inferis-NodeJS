@@ -55,6 +55,48 @@ const AllBuyablePotions = [
       }
     ]
     },
+    {
+        name: "Quarter Revival Revival",
+        description: "The Fixer Elixir gives a warrior an instant return to quarter stamina/health",
+        image: "https://i.postimg.cc/nrjc6N1B/green.png",
+        attributes: { color: "Green" },
+        potionId: 1,
+        inferis: 10,
+        required : [{
+          item: 41,
+          value: 1
+        },
+        {
+          item: 42,
+          value: 1
+        },
+        {
+          item: 44,
+          value: 1
+        }
+      ]
+      },
+      {
+        name: "Half Revival Elixir",
+        description: "The Fixer Elixir gives a warrior an instant return to half stamina/health",
+        image: "https://i.postimg.cc/R0pWy1Br/red.png",
+        attributes: { color: "Red" },
+        potionId: 2,
+        inferis: 15,
+        required : [{
+          item: 41,
+          value: 1
+        },
+        {
+          item: 42,
+          value: 1
+        },
+        {
+          item: 44,
+          value: 1
+        }
+      ]
+      },
   ];
 
 // Async helper function to burn asset by collection ID and assetID
