@@ -34,72 +34,83 @@ const AllBuyableWarriors = [
   ];
 
 const AllBuyablePotions = [
-    {
-      name: "Fixer Elixir",
-      description: "The Fixer Elixir gives a warrior an instant return to stamina/full health",
-      image: "https://i.postimg.cc/6qsC1bw4/revival.png",
-      attributes: { color: "Blue" },
-      potionId: 0,
-      inferis: 20,
-      required : [{
+  {
+    name: "Fixer Elixir",
+    description:
+      "The Fixer Elixir gives a warrior an instant return to stamina/full health",
+    image: "https://i.postimg.cc/6qsC1bw4/revival.png",
+    attributes: { color: "Blue" },
+    potionId: 0,
+    inferis: 20,
+    required: [
+      {
         item: 41,
-        value: 1
+        value: 1,
       },
       {
         item: 42,
-        value: 1
+        value: 1,
       },
       {
         item: 44,
-        value: 1
-      }
-    ]
-    },
-    {
-        name: "Quarter Revival Revival",
-        description: "The Fixer Elixir gives a warrior an instant return to quarter stamina/health",
-        image: "https://i.postimg.cc/nrjc6N1B/green.png",
-        attributes: { color: "Green" },
-        potionId: 1,
-        inferis: 10,
-        required : [{
-          item: 41,
-          value: 1
-        },
-        {
-          item: 42,
-          value: 1
-        },
-        {
-          item: 44,
-          value: 1
-        }
-      ]
+        value: 1,
+      },
+    ],
+  },
+  {
+    name: "Quarter Revival Elixir",
+    description:
+      "The Fixer Elixir gives a warrior an instant return to quarter stamina/health",
+    image: "https://i.postimg.cc/nrjc6N1B/green.png",
+    attributes: { color: "Green" },
+    potionId: 1,
+    inferis: 10,
+    required: [
+      {
+        item: 41,
+        value: 1,
       },
       {
-        name: "Half Revival Elixir",
-        description: "The Fixer Elixir gives a warrior an instant return to half stamina/health",
-        image: "https://i.postimg.cc/R0pWy1Br/red.png",
-        attributes: { color: "Red" },
-        potionId: 2,
-        inferis: 15,
-        required : [{
-          item: 41,
-          value: 1
-        },
-        {
-          item: 42,
-          value: 1
-        },
-        {
-          item: 44,
-          value: 1
-        }
-      ]
+        item: 42,
+        value: 1,
       },
-  ];
+      {
+        item: 44,
+        value: 1,
+      },
+    ],
+  },
+  {
+    name: "Half Revival Elixir",
+    description:
+      "The Fixer Elixir gives a warrior an instant return to half stamina/health",
+    image: "https://i.postimg.cc/R0pWy1Br/red.png",
+    attributes: { color: "Red" },
+    potionId: 2,
+    inferis: 15,
+    required: [
+      {
+        item: 41,
+        value: 1,
+      },
+      {
+        item: 42,
+        value: 1,
+      },
+      {
+        item: 44,
+        value: 1,
+      },
+    ],
+  },
+];
 
-// Async helper function to burn asset by collection ID and assetID
+/* -------------------------------------------------------------------------- */
+/*                                Helper Code                                 */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ Burn NFT ------------------------------ */
+
 async function burnAsset(assetcollectionId, assetId) {
     const options = {
         method: 'POST',
@@ -120,26 +131,9 @@ async function burnAsset(assetcollectionId, assetId) {
         });
 }
 
-// helper searchAssetFromCollection function to be called inside API requests, to return NFTs by project id to fetch response and store nftIds in array to help with burn logic 
-async function searchAssetsFromCollection(assetcollectionId, playerAddress) {
-    const options = {
-        method: 'POST',
-        url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/search?page=1&limit=100&search=${playerAddress}`,
-        headers: {
-          accept: 'application/json',
-          authorization: `Bearer ${underdogKey}`
-        }
-    };
-      
-      axios
-        .request(options)
-        .then(function (response) {
-          console.log(response.data);
-        })
-        .catch(function (error) {
-          console.error(error);
-        });
-}
+/* -------------------------------------------------------------------------- */
+/*                                End of Helper Code                          */
+/* -------------------------------------------------------------------------- */
 
 
 /* -------------------------------------------------------------------------- */
@@ -602,7 +596,7 @@ app.post('/scroll', async(req, res) => {
 // }
 /* ------------------------------ mint potion after burning a artifact ------------------------------ */
 
-app.post('/fixerelixir', async(req, res) => {
+app.post('/potion', async(req, res) => {
     try {
         const { receiver, id } = req.body;
         const potion = AllBuyablePotions[id];
@@ -666,6 +660,77 @@ app.post('/fixerelixir', async(req, res) => {
         res.status(500).send(error.message);
     }
 })
+
+app.post("/burnAndMintPotion", async (req, res) => {
+  try {
+    const { receiver, id, burnItems } = req.body;
+    for (let i = 0; i < burnItems.length; i++) {
+      const element = burnItems[i];
+      console.log(element.item);
+      console.log(element.value);
+    }
+    // const potion = AllBuyablePotions[id];
+    // const elixirdata = {
+    //   name: potion.name,
+    //   symbol: "ELIXIR",
+    //   description: potion.description,
+    //   image: potion.image,
+    //   attributes: potion.attributes,
+    //   receiver: { address: receiver },
+    //   delegated: true,
+    // };
+
+    // let elixirAccountInfo = null;
+
+    // while (!elixirAccountInfo) {
+    //   elixirAccountInfo = await connection.getAccountInfo(
+    //     new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+    //   );
+    //   await new Promise((resolve) => setTimeout(resolve, 100));
+    // }
+
+    // const createElixirResponse = await axios.post(
+    //   `${underdogApiEndpoint}/v2/projects/43/nfts`,
+    //   elixirdata,
+    //   config
+    // );
+
+    // let retrieveElixir;
+    // do {
+    //   retrieveElixir = await axios.get(
+    //     `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
+    //     config
+    //   );
+    //   await new Promise((resolve) => setTimeout(resolve, 100));
+    // } while (retrieveElixir.data.status !== "confirmed");
+
+    // // signatures
+    // const signatures = await connection.getSignaturesForAddress(
+    //   new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+    //   {
+    //     commitment: "confirmed",
+    //   }
+    // );
+
+    // const transactionDetails = await connection.getParsedTransaction(
+    //   signatures[0].signature,
+    //   {
+    //     commitment: "confirmed",
+    //     encoding: "jsonParsed",
+    //     maxSupportedTransactionVersion: 0,
+    //   }
+    // );
+
+    // let elixirData = {
+    //   elixirData: `${JSON.stringify(retrieveElixir.data)}`,
+    //   nftId: `${createElixirResponse.data.nftId}`,
+    // };
+
+    // res.json(elixirData);
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
 
 /* ------------------------------ burn potion NFT from collection upon use of potion inside the game ------------------------------ */
 
