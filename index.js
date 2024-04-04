@@ -7,6 +7,7 @@ app.use(express.json());
 
 // solana
 const web3 = require("@solana/web3.js");
+const BN = require("bn.js");
 require('dotenv').config();
 const apiKey = process.env.apikey;
 const underdogKey = process.env.underdogkey;
@@ -27,7 +28,7 @@ const AllBuyableWarriors = [
       name: "Tennon",
       description: "The mighty Tennon",
       image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-      attributes: { HP: "150", STM: "150" },
+      attributes: { HP: "150", STM: "150", LVL: "1", GLD: "Strykur" },
       inferis: 20,
       characterId : 0
     },
@@ -261,7 +262,7 @@ app.post('/warrior', async(req, res) => {
         }
 
         const createNftResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/40/nfts`,
+            `${underdogApiEndpoint}/v2/projects/46/nfts`,
             nftData,
             config
         );
@@ -269,7 +270,7 @@ app.post('/warrior', async(req, res) => {
         let retrieveNFT;
         do {
             retrieveNFT = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/40/nfts/${createNftResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/46/nfts/${createNftResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
@@ -786,6 +787,43 @@ app.post('/burnPotion', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                End of Checkpoints Code                     */
 /* -------------------------------------------------------------------------- */
+
+// app.post("/addSOARScore", async (req, res) => {
+//   try {
+//     const { score, playerPK } = req.body;
+//     const authWallet = web3.Keypair.fromSecretKey(
+//       bs58.decode(
+//         "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
+//       )
+//     );
+
+//     const user = new web3.PublicKey(playerPK);
+//     const playerAddress = soarClient.utils.derivePlayerAddress(user)[0];
+//     const leaderboard = new web3.PublicKey(
+//       "2bT4iEjFMRaTiopZp4PdfwkVB31g4j5EU4G1WxYRqR5d"
+//     );
+//     const scoresAddress = soarClient.utils.derivePlayerScoresListAddress(
+//       user,
+//       leaderboard
+//     );
+
+//     //Check if player exists
+
+//     const transactionIx = soarClient
+//       .submitScoreToLeaderBoard(
+//         playerAddress,
+//         authWallet,
+//         leaderboard,
+//         new BN(score)
+//     );
+    
+//     await client.sendAndConfirmTransaction(transactionIx, [authWallet]);
+
+//   } catch (error) {
+//     res.status(500).send(error.message);
+//   }
+// });
+
 
 
 
