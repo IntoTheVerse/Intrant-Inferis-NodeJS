@@ -735,6 +735,25 @@ app.post("/burnAndMintPotion", async (req, res) => {
 
 /* ------------------------------ burn potion NFT from collection upon use of potion inside the game ------------------------------ */
 
+app.post('/burnPotion', async(req, res) => {
+    try {
+        const { id } = req.body;
+        await burnAsset(43, id).then(function (response) {
+            res.json(response);
+          })
+          .catch(function (error) {
+            console.error(error);
+          });
+
+        
+    } 
+    catch (error) {
+        res.status(500).send(error.message);
+    }
+})
+
+
+
 /* -------------------------------------------------------------------------- */
 /*                                End of Potions Code                               */
 /* -------------------------------------------------------------------------- */
