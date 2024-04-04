@@ -665,68 +665,69 @@ app.post("/burnAndMintPotion", async (req, res) => {
   try {
     const { receiver, id, burnItems } = req.body;
     for (let i = 0; i < burnItems.length; i++) {
-      const element = burnItems[i];
-      console.log(element.item);
-      console.log(element.value);
+      for (let j = 0; j < burnItems[i].nftIds.length; j++) {
+        await burnAsset(burnItems[i].projectId, burnItems[i].nftIds[j]);
+      }
     }
-    // const potion = AllBuyablePotions[id];
-    // const elixirdata = {
-    //   name: potion.name,
-    //   symbol: "ELIXIR",
-    //   description: potion.description,
-    //   image: potion.image,
-    //   attributes: potion.attributes,
-    //   receiver: { address: receiver },
-    //   delegated: true,
-    // };
 
-    // let elixirAccountInfo = null;
+    const potion = AllBuyablePotions[id];
+    const elixirdata = {
+      name: potion.name,
+      symbol: "ELIXIR",
+      description: potion.description,
+      image: potion.image,
+      attributes: potion.attributes,
+      receiver: { address: receiver },
+      delegated: true,
+    };
 
-    // while (!elixirAccountInfo) {
-    //   elixirAccountInfo = await connection.getAccountInfo(
-    //     new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
-    //   );
-    //   await new Promise((resolve) => setTimeout(resolve, 100));
-    // }
+    let elixirAccountInfo = null;
 
-    // const createElixirResponse = await axios.post(
-    //   `${underdogApiEndpoint}/v2/projects/43/nfts`,
-    //   elixirdata,
-    //   config
-    // );
+    while (!elixirAccountInfo) {
+      elixirAccountInfo = await connection.getAccountInfo(
+        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
 
-    // let retrieveElixir;
-    // do {
-    //   retrieveElixir = await axios.get(
-    //     `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
-    //     config
-    //   );
-    //   await new Promise((resolve) => setTimeout(resolve, 100));
-    // } while (retrieveElixir.data.status !== "confirmed");
+    const createElixirResponse = await axios.post(
+      `${underdogApiEndpoint}/v2/projects/43/nfts`,
+      elixirdata,
+      config
+    );
 
-    // // signatures
-    // const signatures = await connection.getSignaturesForAddress(
-    //   new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
-    //   {
-    //     commitment: "confirmed",
-    //   }
-    // );
+    let retrieveElixir;
+    do {
+      retrieveElixir = await axios.get(
+        `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
+        config
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (retrieveElixir.data.status !== "confirmed");
 
-    // const transactionDetails = await connection.getParsedTransaction(
-    //   signatures[0].signature,
-    //   {
-    //     commitment: "confirmed",
-    //     encoding: "jsonParsed",
-    //     maxSupportedTransactionVersion: 0,
-    //   }
-    // );
+    // signatures
+    const signatures = await connection.getSignaturesForAddress(
+      new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+      {
+        commitment: "confirmed",
+      }
+    );
 
-    // let elixirData = {
-    //   elixirData: `${JSON.stringify(retrieveElixir.data)}`,
-    //   nftId: `${createElixirResponse.data.nftId}`,
-    // };
+    const transactionDetails = await connection.getParsedTransaction(
+      signatures[0].signature,
+      {
+        commitment: "confirmed",
+        encoding: "jsonParsed",
+        maxSupportedTransactionVersion: 0,
+      }
+    );
 
-    // res.json(elixirData);
+    let elixirData = {
+      elixirData: `${JSON.stringify(retrieveElixir.data)}`,
+      nftId: `${createElixirResponse.data.nftId}`,
+    };
+
+    res.json(elixirData);
   } catch {
     res.status(500).send(error.message);
   }
