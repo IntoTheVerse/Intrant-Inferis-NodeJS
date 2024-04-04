@@ -45,15 +45,15 @@ const AllBuyablePotions = [
     required: [
       {
         item: 41,
-        value: 1,
+        value: 2,
       },
       {
         item: 42,
-        value: 1,
+        value: 2,
       },
       {
         item: 44,
-        value: 1,
+        value: 2,
       },
     ],
   },
@@ -95,7 +95,7 @@ const AllBuyablePotions = [
       },
       {
         item: 42,
-        value: 1,
+        value: 2,
       },
       {
         item: 44,
