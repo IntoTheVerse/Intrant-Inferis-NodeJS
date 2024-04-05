@@ -106,6 +106,54 @@ const AllBuyablePotions = [
   },
 ];
 
+const AllBuyablePowerups = [
+  {
+    name: "Plus 15 Powerup",
+    description:
+      "Boost player's STM and HP by +15 units causing an upgrade",
+    image: "https://i.postimg.cc/Hk6D9bhf/powerup.png",
+    attributes: { color: "Cyan" },
+    powerupId: 0,
+    inferis: 50,
+    required: [
+      {
+        item: 41,
+        value: 3,
+      },
+      {
+        item: 42,
+        value: 3,
+      },
+      {
+        item: 44,
+        value: 3,
+      },
+    ],
+  },
+  {
+    name: "Plus 20 Powerup",
+    description: "Boost player's STM and HP by +20 units causing an upgrade",
+    image: "https://i.postimg.cc/X7DtZnBb/20stm.png",
+    attributes: { color: "Pink" },
+    powerupId: 1,
+    inferis: 60,
+    required: [
+      {
+        item: 41,
+        value: 4,
+      },
+      {
+        item: 42,
+        value: 4,
+      },
+      {
+        item: 44,
+        value: 4,
+      },
+    ],
+  },
+]
+
 /* -------------------------------------------------------------------------- */
 /*                                Helper Code                                 */
 /* -------------------------------------------------------------------------- */
@@ -770,6 +818,22 @@ app.post('/burnPotion', async(req, res) => {
 /* ------------------------------ search if potions NFTs exist using collection address ------------------------------ */
 
 /* ------------------------------ burn powerup NFT from collection upon use of powerup inside the game ------------------------------ */
+app.post('/burnPowerup', async(req, res) => {
+  try {
+      const { id } = req.body;
+      await burnAsset(45, id).then(function (response) {
+          res.json(response);
+        })
+        .catch(function (error) {
+          console.error(error);
+        });
+
+      
+  } 
+  catch (error) {
+      res.status(500).send(error.message);
+  }
+})
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Powerups Code                        */
