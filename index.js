@@ -1021,7 +1021,7 @@ app.post('/checkpoint', async(req, res) => {
 
       res.json(checkpointData);
   } 
-  catch {
+  catch (error) {
       res.status(500).send(error.message);
   }
 })
