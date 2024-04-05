@@ -112,7 +112,7 @@ const AllBuyablePowerups = [
     description:
       "Boost player's STM and HP by +15 units causing an upgrade",
     image: "https://i.postimg.cc/Hk6D9bhf/powerup.png",
-    attributes: { color: "Cyan" },
+    attributes: { color: "Cyan", stm: "+15", hp: "+15"},
     powerupId: 0,
     inferis: 50,
     required: [
@@ -134,7 +134,7 @@ const AllBuyablePowerups = [
     name: "Plus 20 Powerup",
     description: "Boost player's STM and HP by +20 units causing an upgrade",
     image: "https://i.postimg.cc/X7DtZnBb/20stm.png",
-    attributes: { color: "Pink" },
+    attributes: { color: "Pink", stm: "+20", hp: "+20"},
     powerupId: 1,
     inferis: 60,
     required: [
@@ -331,8 +331,6 @@ app.post('/warrior', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveNFT.data.status !== 'confirmed');
-        // console.log(`NFT ID: ${createNftResponse.data.nftId}`);
-        // console.log(`NFT Data: ${JSON.stringify(retrieveNFT.data)}`);
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("8iwfqhjhWnVE7ABb8pAKTKGvF7Q48hm5EvWCT9e1kPRj"), {
@@ -384,15 +382,6 @@ app.post('/warrior', async(req, res) => {
 /*                                Theracode                               */
 /* -------------------------------------------------------------------------- */
 
-// {
-//     "warrior_name" : "Theracode",
-//     "warrior_symbol" : "THERACODE",
-//     "warrior_description" : "Floating Theracode that reveals binary numbers.",
-//     "warrior_image" : "https://i.postimg.cc/YCgY7ZB8/theracode.png",
-//     "color": "blue",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
-
 /* ------------------------------ mint theracode during collection from the game ------------------------------ */
 
 app.post('/theracode', async(req, res) => {
@@ -431,15 +420,6 @@ app.post('/theracode', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveTheracode.data.status !== 'confirmed');
-        // console.log(`NFT ID: ${createTheracodeResponse.data.nftId}`);
-        // console.log(`Mint Address: ${retrieveTheracode.data.mintAddress}`);
-        // console.log(`Name: ${retrieveTheracode.data.name}`);
-        // console.log(`Symbol: ${retrieveTheracode.data.symbol}`);
-        // console.log(`Image: ${retrieveTheracode.data.image}`);
-        // console.log(`Description: ${retrieveTheracode.data.description}`);
-        // console.log(`Attributes: color -> ${retrieveTheracode.data.attributes.color}`);
-        // console.log(`Owner: ${retrieveTheracode.data.ownerAddress}`);
-        // console.log(`NFT Data: ${JSON.stringify(retrieveTheracode.data)}`);
 
         // signatures
         const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
@@ -478,15 +458,6 @@ app.post('/theracode', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                AsimanaBox                              */
 /* -------------------------------------------------------------------------- */
-
-// {
-//     "warrior_name" : "Asimana Box",
-//     "warrior_symbol" : "ASIMANA",
-//     "warrior_description" : "Glowing mini Asimana Boxes hide the artifacts. ",
-//     "warrior_image" : "https://i.postimg.cc/pVqCrpc7/asimana.png",
-//     "color": "yellow",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
 
 /* ------------------------------ mint asimana box during collection from the game ------------------------------ */
 app.post('/asimanabox', async(req, res) => {
@@ -557,15 +528,6 @@ app.post('/asimanabox', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                Magical Scroll                              */
 /* -------------------------------------------------------------------------- */
-
-// {
-//     "warrior_name" : "Magical Scroll",
-//     "warrior_symbol" : "SCROLL",
-//     "warrior_description" : "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
-//     "warrior_image" : "https://i.postimg.cc/tTfzGtQW/Union.png",
-//     "color": "white",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
 
 /* ------------------------------ mint magical scroll during collection from the game ------------------------------ */
 
@@ -643,14 +605,7 @@ app.post('/scroll', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                Potions' Code                               */
 /* -------------------------------------------------------------------------- */
-// {
-//     "warrior_name" : "Fixer Elixir",
-//     "warrior_symbol" : "ELIXIR",
-//     "warrior_description" : "The Fixer Elixir gives a warrior an instant return to stamina/full health.",
-//     "warrior_image" : "https://i.postimg.cc/6qsC1bw4/revival.png",
-//     "color": "purple",
-//     "warrior_receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
+
 /* ------------------------------ mint potion after burning a artifact ------------------------------ */
 
 app.post('/potion', async(req, res) => {
@@ -821,7 +776,144 @@ app.post('/burnPotion', async(req, res) => {
 /*                                Powerups' Code                               */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------------ mint potion after burning a artifact ------------------------------ */
+/* ------------------------------ Buy Powerup ------------------------------ */
+app.post("/powerup", async (req, res) => {
+  try {
+    const { receiver, id } = req.body;
+    const powerups = AllBuyablePowerups[id];
+    const powerUpData = {
+      name: powerups.name,
+      symbol: "POWER",
+      description: powerups.description,
+      image: powerups.image,
+      attributes: powerups.attributes,
+      receiver: { address: receiver },
+      delegated: true,
+    };
+
+    let powerUpAccountInfo = null;
+
+    while (!powerUpAccountInfo) {
+      powerUpAccountInfo = await connection.getAccountInfo(
+        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    const createPowerUpResponse = await axios.post(
+      `${underdogApiEndpoint}/v2/projects/45/nfts`,
+      powerUpData,
+      config
+    );
+
+    let retrievePowerUp;
+    do {
+      retrievePowerUp = await axios.get(
+        `${underdogApiEndpoint}/v2/projects/45/nfts/${createPowerUpResponse.data.nftId}`,
+        config
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (retrievePowerUp.data.status !== "confirmed");
+
+    // signatures
+    const signatures = await connection.getSignaturesForAddress(
+      new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+      {
+        commitment: "confirmed",
+      }
+    );
+
+    const transactionDetails = await connection.getParsedTransaction(
+      signatures[0].signature,
+      {
+        commitment: "confirmed",
+        encoding: "jsonParsed",
+        maxSupportedTransactionVersion: 0,
+      }
+    );
+
+    let powerupdata = {
+      powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
+      nftId: `${createPowerUpResponse.data.nftId}`,
+    };
+
+    res.json(powerupdata);
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
+
+app.post("/burnAndMintPowerup", async (req, res) => {
+  try {
+    const { receiver, id, burnItems } = req.body;
+    for (let i = 0; i < burnItems.length; i++) {
+      for (let j = 0; j < burnItems[i].nftIds.length; j++) {
+        await burnAsset(burnItems[i].projectId, burnItems[i].nftIds[j]);
+      }
+    }
+    
+    const powerups = AllBuyablePowerups[id];
+    const powerUpData = {
+      name: powerups.name,
+      symbol: "POWER",
+      description: powerups.description,
+      image: powerups.image,
+      attributes: powerups.attributes,
+      receiver: { address: receiver },
+      delegated: true,
+    };
+
+    let powerUpAccountInfo = null;
+
+    while (!powerUpAccountInfo) {
+      powerUpAccountInfo = await connection.getAccountInfo(
+        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    const createPowerUpResponse = await axios.post(
+      `${underdogApiEndpoint}/v2/projects/45/nfts`,
+      powerUpData,
+      config
+    );
+
+    let retrievePowerUp;
+    do {
+      retrievePowerUp = await axios.get(
+        `${underdogApiEndpoint}/v2/projects/45/nfts/${createPowerUpResponse.data.nftId}`,
+        config
+      );
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    } while (retrievePowerUp.data.status !== "confirmed");
+
+    // signatures
+    const signatures = await connection.getSignaturesForAddress(
+      new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+      {
+        commitment: "confirmed",
+      }
+    );
+
+    const transactionDetails = await connection.getParsedTransaction(
+      signatures[0].signature,
+      {
+        commitment: "confirmed",
+        encoding: "jsonParsed",
+        maxSupportedTransactionVersion: 0,
+      }
+    );
+
+    let powerupdata = {
+      powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
+      nftId: `${createPowerUpResponse.data.nftId}`,
+    };
+
+    res.json(powerupdata);
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
 
 /* ------------------------------ search if potions NFTs exist using collection address ------------------------------ */
 
