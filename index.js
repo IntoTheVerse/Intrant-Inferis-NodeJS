@@ -795,7 +795,7 @@ app.post("/powerup", async (req, res) => {
 
     while (!powerUpAccountInfo) {
       powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+        new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk")
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -817,7 +817,7 @@ app.post("/powerup", async (req, res) => {
 
     // signatures
     const signatures = await connection.getSignaturesForAddress(
-      new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+      new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk"),
       {
         commitment: "confirmed",
       }
@@ -867,7 +867,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
 
     while (!powerUpAccountInfo) {
       powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+        new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk")
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -889,7 +889,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
 
     // signatures
     const signatures = await connection.getSignaturesForAddress(
-      new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
+      new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk"),
       {
         commitment: "confirmed",
       }
