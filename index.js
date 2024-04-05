@@ -944,7 +944,88 @@ app.post('/burnPowerup', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                 Checkpoints                               */
 /* -------------------------------------------------------------------------- */
+
+// {
+//     "name" : "Checkpoint 1",
+//     "symbol" : "CP",
+//     "description" : "You made it to checkpoint 1",
+//     "image" : "https://i.postimg.cc/htFsr6gJ/cp1.png",
+//     "attributes : { "color": "blue", "lvl": "1" },
+//     "receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
+// }
+
+// 5 instances of checkpoints
+// cp1  - https://i.postimg.cc/htFsr6gJ/cp1.png 
+// cp2 - https://i.postimg.cc/85CmcVdY/cp2.png
+// cp3 - https://i.postimg.cc/j5kQJkZS/cp3.png
+// cp4 - https://i.postimg.cc/gjXyyqTq/cp4.png
+// cp5 - https://i.postimg.cc/J0fNpHww/cp5.png
+
 /* ------------------------------ mint checkpoint ------------------------------ */
+app.post('/checkpoint', async(req, res) => {
+  try {
+      const { receiver } = req.body;
+      const checkpointdata = {
+        name: "Checkpoint 1",
+        symbol: "CP",
+        description: "You made it to checkpoint 1",
+        image: "https://i.postimg.cc/htFsr6gJ/cp1.png",
+        attributes: { color: "black", lvl: "1" },
+        receiver: { address: receiver },
+        delegated: true,
+      };
+
+      let checkpointAccountInfo = null;
+
+      while (!checkpointAccountInfo) {
+        checkpointAccountInfo = await connection.getAccountInfo(
+            new web3.PublicKey("3UaUDWGurbHPxMXixj2Gup9XjVafZ2Lf3XdnUoRmHZFc")
+          );
+          await new Promise( resolve => setTimeout(resolve, 100));
+      }
+
+      const createCheckpointResponse = await axios.post(
+          `${underdogApiEndpoint}/v2/projects/47/nfts`,
+          checkpointdata,
+          config
+      );
+      
+      let retrieveCheckpoint;
+      do {
+            retrieveCheckpoint = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/47/nfts/${createCheckpointResponse.data.nftId}`,
+            config
+          );
+          await new Promise( resolve => setTimeout(resolve, 100));
+      } while(retrieveCheckpoint.data.status !== 'confirmed');
+
+      // signatures
+      const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("3UaUDWGurbHPxMXixj2Gup9XjVafZ2Lf3XdnUoRmHZFc"), {
+          commitment: 'confirmed'
+      });
+
+      const transactionDetails = await connection.getParsedTransaction(
+          signatures[0].signature,
+          {
+              commitment: "confirmed",
+              encoding: "jsonParsed",
+              maxSupportedTransactionVersion: 0,
+
+          }
+      )
+
+      let checkpointData = {
+          "checkpointData" : `${(JSON.stringify(retrieveCheckpoint.data))}`,
+          "nftId" : `${createCheckpointResponse.data.nftId}`,
+      }
+
+      res.json(checkpointData);
+  } 
+  catch {
+      res.status(500).send(error.message);
+  }
+})
+
 
 /* ------------------------------ update checkpoint ------------------------------ */
 
