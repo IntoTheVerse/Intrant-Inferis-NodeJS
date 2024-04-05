@@ -1028,6 +1028,39 @@ app.post('/checkpoint', async(req, res) => {
 
 
 /* ------------------------------ update checkpoint ------------------------------ */
+app.put('/checkpointUpdate', async(req, res) => {
+  try {
+    const { NFTId, name, description, color, lvl, image } = req.body
+    const options = {
+      method: 'PUT',
+      url: `https://devnet.underdogprotocol.com/v2/projects/47/nfts/${NFTId}`,
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        authorization: `Bearer ${underdogKey}`
+      },
+      data: {
+        attributes: {color: color, lvl: lvl},
+        name: name,
+        description: description,
+        image: image
+      }
+    };
+    
+    axios
+      .request(options)
+      .then(function (response) {
+        console.log(response.data);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+      
+  } 
+  catch {
+    res.status(500).send(error.message);
+  }
+})
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Checkpoints Code                     */
