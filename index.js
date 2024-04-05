@@ -1026,6 +1026,9 @@ app.post('/checkpoint', async(req, res) => {
   }
 })
 
+/* ------------------------------ For searching checkpoint NFTs use above get function to fetch checkpoint (1 checkpoint per user)  ------------------------------ */
+
+
 
 /* ------------------------------ update checkpoint ------------------------------ */
 app.put('/checkpointUpdate', async(req, res) => {
