@@ -272,6 +272,14 @@ app.get("/getAllBuyablePotions", async (req, res) => {
   }
 });
 
+app.get("/getAllBuyablePowerups", async (req, res) => {
+  try {
+    res.json(AllBuyablePowerups);
+  } catch {
+    res.status(500).send(error.message);
+  }
+});
+
 /* -------------------------------------------------------------------------- */
 /*                                End of Get All Default Code                 */
 /* -------------------------------------------------------------------------- */
