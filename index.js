@@ -27,6 +27,7 @@ const CharacterLevelUpThreshold = [
   { character: "Tennon", hp_threshold: [200], stm_threshold: [200] }
 ];
 
+
 const AllBuyableWarriors = [
     {
       name: "Tennon",
@@ -294,6 +295,14 @@ app.get("/getAllBuyablePowerups", async (req, res) => {
 /*                                Warrior Code                                */
 /* -------------------------------------------------------------------------- */
 
+const WarriorImages = [
+  ["https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png", 1],
+  ["https://i.postimg.cc/0QVS25CM/level2.png", 2],
+  ["https://i.postimg.cc/v817H9pG/lvl3.png", 3],
+  ["https://i.postimg.cc/d0trMT2P/lvl4.png", 4],
+  ["https://i.postimg.cc/L8vgV6ry/lvl5.png", 5],
+];
+
 /* ------------------------------ Mint Warrior ------------------------------ */
 
 
@@ -367,7 +376,38 @@ app.post('/warrior', async(req, res) => {
 
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
 
-
+app.put('/warriorUpdate', async(req, res) => {
+  try {
+    const { NFTId, hp, stm, lvl } = req.body
+    const options = {
+      method: "PUT",
+      url: `https://devnet.underdogprotocol.com/v2/projects/46/nfts/${NFTId}`,
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json",
+        authorization: `Bearer ${underdogKey}`,
+      },
+      data: {
+        attributes: { HP: hp, STM: stm, LVL: WarriorImages[lvl - 1][1], GLD: "Strykur" },
+        name: "Tennon",
+        image: WarriorImages[lvl -1][0],
+      },
+    };
+    
+    axios
+      .request(options)
+      .then(function (response) {
+        console.log(response.data);
+      })
+      .catch(function (error) {
+        console.error(error);
+      });
+      
+  } 
+  catch {
+    res.status(500).send(error.message);
+  }
+})
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Warrior Code                         */
