@@ -23,12 +23,16 @@ const config = {
     }
 }
 
+const CharacterLevelUpThreshold = [
+  { character: "Tennon", hp_threshold: [200], stm_threshold: [200] }
+];
+
 const AllBuyableWarriors = [
     {
       name: "Tennon",
       description: "The mighty Tennon",
       image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-      attributes: { HP: "150", STM: "150", LVL: "1", GLD: "Strykur" },
+      attributes: { HP: "190", STM: "190", LVL: "1", GLD: "Strykur" },
       inferis: 20,
       characterId : 0
     },
@@ -927,8 +931,6 @@ app.post('/burnPowerup', async(req, res) => {
         .catch(function (error) {
           console.error(error);
         });
-
-      
   } 
   catch (error) {
       res.status(500).send(error.message);
@@ -954,23 +956,25 @@ app.post('/burnPowerup', async(req, res) => {
 //     "receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
 // }
 
-// 5 instances of checkpoints
-// cp1  - https://i.postimg.cc/htFsr6gJ/cp1.png 
-// cp2 - https://i.postimg.cc/85CmcVdY/cp2.png
-// cp3 - https://i.postimg.cc/j5kQJkZS/cp3.png
-// cp4 - https://i.postimg.cc/gjXyyqTq/cp4.png
-// cp5 - https://i.postimg.cc/J0fNpHww/cp5.png
+const CheckpointsImages = [
+  ["https://i.postimg.cc/t4zR3nQf/cp0.png", "Green"],
+  ["https://i.postimg.cc/htFsr6gJ/cp1.png", "Black"],
+  ["https://i.postimg.cc/85CmcVdY/cp2.png", "Red"],
+  ["https://i.postimg.cc/j5kQJkZS/cp3.png", "Cyan"],
+  ["https://i.postimg.cc/gjXyyqTq/cp4.png", "Yellow"],
+  ["https://i.postimg.cc/J0fNpHww/cp5.png", "Purple"],
+];
 
 /* ------------------------------ mint checkpoint ------------------------------ */
 app.post('/checkpoint', async(req, res) => {
   try {
-      const { receiver } = req.body;
+      const { receiver, cp_level } = req.body;
       const checkpointdata = {
-        name: "Checkpoint 1",
+        name: "Checkpoint 0",
         symbol: "CP",
-        description: "You made it to checkpoint 1",
-        image: "https://i.postimg.cc/htFsr6gJ/cp1.png",
-        attributes: { color: "black", lvl: "1" },
+        description: "You made it to checkpoint 0",
+        image: CheckpointsImages[0][0],
+        attributes: { color: CheckpointsImages[0][1], lvl: cp_level },
         receiver: { address: receiver },
         delegated: true,
       };
@@ -1033,21 +1037,21 @@ app.post('/checkpoint', async(req, res) => {
 /* ------------------------------ update checkpoint ------------------------------ */
 app.put('/checkpointUpdate', async(req, res) => {
   try {
-    const { NFTId, name, description, color, lvl, image } = req.body
+    const { NFTId, cp_level, cp_number } = req.body
     const options = {
-      method: 'PUT',
+      method: "PUT",
       url: `https://devnet.underdogprotocol.com/v2/projects/47/nfts/${NFTId}`,
       headers: {
-        accept: 'application/json',
-        'content-type': 'application/json',
-        authorization: `Bearer ${underdogKey}`
+        accept: "application/json",
+        "content-type": "application/json",
+        authorization: `Bearer ${underdogKey}`,
       },
       data: {
-        attributes: {color: color, lvl: lvl},
-        name: name,
-        description: description,
-        image: image
-      }
+        attributes: { color: CheckpointsImages[cp_number][1], lvl: cp_level },
+        name: `Checkpoint ${cp_level}`,
+        description: `You made it to checkpoint ${cp_level}`,
+        image: CheckpointsImages[cp_number][0],
+      },
     };
     
     axios
