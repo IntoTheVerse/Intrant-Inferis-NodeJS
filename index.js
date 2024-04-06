@@ -1048,8 +1048,8 @@ app.put('/checkpointUpdate', async(req, res) => {
       },
       data: {
         attributes: { color: CheckpointsImages[cp_number][1], lvl: cp_level },
-        name: `Checkpoint ${cp_level}`,
-        description: `You made it to checkpoint ${cp_level}`,
+        name: `Checkpoint ${cp_number}`,
+        description: `You made it to checkpoint ${cp_number}`,
         image: CheckpointsImages[cp_number][0],
       },
     };
