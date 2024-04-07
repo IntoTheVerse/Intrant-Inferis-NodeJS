@@ -295,14 +295,6 @@ app.get("/getAllBuyablePowerups", async (req, res) => {
 /*                                Warrior Code                                */
 /* -------------------------------------------------------------------------- */
 
-const WarriorImages = [
-  ["https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png", 1],
-  ["https://i.postimg.cc/0QVS25CM/level2.png", 2],
-  ["https://i.postimg.cc/v817H9pG/lvl3.png", 3],
-  ["https://i.postimg.cc/d0trMT2P/lvl4.png", 4],
-  ["https://i.postimg.cc/L8vgV6ry/lvl5.png", 5],
-];
-
 /* ------------------------------ Mint Warrior ------------------------------ */
 
 
@@ -376,33 +368,64 @@ app.post('/warrior', async(req, res) => {
 
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
 
+const WarriorImages = [
+  "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+  "https://i.postimg.cc/0QVS25CM/level2.png",
+  "https://i.postimg.cc/v817H9pG/lvl3.png",
+  "https://i.postimg.cc/d0trMT2P/lvl4.png",
+  "https://i.postimg.cc/L8vgV6ry/lvl5.png",
+];
+
 app.put('/warriorUpdate', async(req, res) => {
   try {
-    const { NFTId, hp, stm, lvl } = req.body
-    const options = {
-      method: "PUT",
-      url: `https://devnet.underdogprotocol.com/v2/projects/46/nfts/${NFTId}`,
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: `Bearer ${underdogKey}`,
-      },
-      data: {
-        attributes: { HP: hp, STM: stm, LVL: WarriorImages[lvl - 1][1], GLD: "Strykur" },
-        name: "Tennon",
-        image: WarriorImages[lvl -1][0],
-      },
-    };
-    
-    axios
-      .request(options)
+    const { PowerUpId, NFTId, characterName, hp, stm, lvl } = req.body;
+    let cur_lvl = parseInt(lvl);
+    for (let i = 0; i < CharacterLevelUpThreshold.length; i++) {
+      if (CharacterLevelUpThreshold[i].character === characterName) {
+        if (
+          hp >= CharacterLevelUpThreshold[i].hp_threshold[cur_lvl - 1] &&
+          stm >= CharacterLevelUpThreshold[i].stm_threshold[cur_lvl - 1]
+        ) {
+          cur_lvl++;
+        }
+      }
+    }
+
+    await burnAsset(45, PowerUpId)
       .then(function (response) {
-        console.log(response.data);
+        const options = {
+          method: "PUT",
+          url: `https://devnet.underdogprotocol.com/v2/projects/46/nfts/${NFTId}`,
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+            authorization: `Bearer ${underdogKey}`,
+          },
+          data: {
+            attributes: {
+              HP: hp,
+              STM: stm,
+              LVL: cur_lvl,
+              GLD: "Strykur",
+            },
+            name: "Tennon",
+            image: WarriorImages[cur_lvl - 1],
+          },
+        };
+
+        axios
+          .request(options)
+          .then(function (response) {
+            console.log(response.data);
+            res.json(response.data);
+          })
+          .catch(function (error) {
+            console.error(error);
+          });
       })
       .catch(function (error) {
         console.error(error);
       });
-      
   } 
   catch {
     res.status(500).send(error.message);
@@ -794,14 +817,12 @@ app.post("/burnAndMintPotion", async (req, res) => {
 app.post('/burnPotion', async(req, res) => {
     try {
         const { id } = req.body;
-        await burnAsset(43, id).then(function (response) {
-            res.json(response);
-          })
-          .catch(function (error) {
-            console.error(error);
-          });
-
-        
+      await burnAsset(43, id).then(function (response) {
+        res.json(response);
+      })
+        .catch(function (error) {
+          console.error(error);
+        });
     } 
     catch (error) {
         res.status(500).send(error.message);
@@ -959,24 +980,6 @@ app.post("/burnAndMintPowerup", async (req, res) => {
   }
 });
 
-/* ------------------------------ search if potions NFTs exist using collection address ------------------------------ */
-
-/* ------------------------------ burn powerup NFT from collection upon use of powerup inside the game ------------------------------ */
-app.post('/burnPowerup', async(req, res) => {
-  try {
-      const { id } = req.body;
-      await burnAsset(45, id).then(function (response) {
-          res.json(response);
-        })
-        .catch(function (error) {
-          console.error(error);
-        });
-  } 
-  catch (error) {
-      res.status(500).send(error.message);
-  }
-})
-
 /* -------------------------------------------------------------------------- */
 /*                                End of Powerups Code                        */
 /* -------------------------------------------------------------------------- */
@@ -986,15 +989,6 @@ app.post('/burnPowerup', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                 Checkpoints                               */
 /* -------------------------------------------------------------------------- */
-
-// {
-//     "name" : "Checkpoint 1",
-//     "symbol" : "CP",
-//     "description" : "You made it to checkpoint 1",
-//     "image" : "https://i.postimg.cc/htFsr6gJ/cp1.png",
-//     "attributes : { "color": "blue", "lvl": "1" },
-//     "receiver": "Ggg31TYu5hzH8x7x47W4ZXLqnEPSSqV1nF4YbJAfJyNi" 
-// }
 
 const CheckpointsImages = [
   ["https://i.postimg.cc/t4zR3nQf/cp0.png", "Green"],
@@ -1098,6 +1092,7 @@ app.put('/checkpointUpdate', async(req, res) => {
       .request(options)
       .then(function (response) {
         console.log(response.data);
+        res.json(response.data);
       })
       .catch(function (error) {
         console.error(error);
