@@ -1,4 +1,4 @@
-## BACKEND FOR INTRANT INFERIS STATE COMPRESSION USE CASES ON SOLANA
+## BACKEND FOR INTRANT INFERIS STATE COMPRESSION USE CASES ON SOLANA (Solana Renaissance)
 The backend is currently deployed to Google Cloud App Engine
 
 ### Other links
