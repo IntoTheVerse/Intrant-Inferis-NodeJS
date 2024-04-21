@@ -624,7 +624,7 @@ app.post('/therabox', async(req, res) => {
           name: "Thera Box",
           symbol: "THERABOX",
           description: "Glowing mini Thera Boxes hide the artifacts. ",
-          image: "https://i.postimg.cc/pVqCrpc7/asimana.png",
+          image: "https://i.postimg.cc/Vv0PN1fT/therabox.png",
           attributes: { color: "yellow" },
           receiver: { address: receiver },
           delegated: true,
