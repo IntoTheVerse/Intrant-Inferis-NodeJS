@@ -1,20 +1,9 @@
-// express + node
-// const express = require('express');
-// const app = express();
-// const port = process.env.PORT || 3000;
-// const axios = require('axios');
-// app.use(express.json());
-
-// import express = require('express');
-// import * from "express"
-// import express, { Express, Request, Response } from "express";
 import * as express from 'express';
 import * as dotenv from "dotenv";
 
 dotenv.config();
 const app: express.Application = express();
 const port = process.env.PORT || 8080;
-// import axios = require('axios');
 import axios, { AxiosResponse, AxiosRequestConfig, RawAxiosRequestHeaders } from 'axios';
 app.use(express.json());
 
@@ -29,6 +18,9 @@ const underdogKey = process.env.underdogkey;
 const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
 const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
+
+//Soar
+import { Soar } from "./soar";
 
 const config = {
     headers: {
@@ -1206,43 +1198,41 @@ app.put('/checkpointUpdate', async(req, res) => {
 /*                                End of Checkpoints Code                     */
 /* -------------------------------------------------------------------------- */
 
-// app.post("/addSOARScore", async (req, res) => {
-//   try {
-//     const { score, playerPK } = req.body;
-//     const authWallet = web3.Keypair.fromSecretKey(
-//       bs58.decode(
-//         "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
-//       )
-//     );
+app.post("/addSOARScore", async (req, res) => {
+  try {
+    const { score, playerPK } = req.body;
+    // const authWallet = web3.Keypair.fromSecretKey(
+    //   bs58.decode(
+    //     "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
+    //   )
+    // );
 
-//     const user = new web3.PublicKey(playerPK);
-//     const playerAddress = soarClient.utils.derivePlayerAddress(user)[0];
-//     const leaderboard = new web3.PublicKey(
-//       "2bT4iEjFMRaTiopZp4PdfwkVB31g4j5EU4G1WxYRqR5d"
-//     );
-//     const scoresAddress = soarClient.utils.derivePlayerScoresListAddress(
-//       user,
-//       leaderboard
-//     );
+  //   const user = new web3.PublicKey(playerPK);
+  //   const playerAddress = soarClient.utils.derivePlayerAddress(user)[0];
+  //   const leaderboard = new web3.PublicKey(
+  //     "2bT4iEjFMRaTiopZp4PdfwkVB31g4j5EU4G1WxYRqR5d"
+  //   );
+  //   const scoresAddress = soarClient.utils.derivePlayerScoresListAddress(
+  //     user,
+  //     leaderboard
+  //   );
 
-//     //Check if player exists
+  //   //Check if player exists
 
-//     const transactionIx = soarClient
-//       .submitScoreToLeaderBoard(
-//         playerAddress,
-//         authWallet,
-//         leaderboard,
-//         new BN(score)
-//     );
+  //   const transactionIx = soarClient
+  //     .submitScoreToLeaderBoard(
+  //       playerAddress,
+  //       authWallet,
+  //       leaderboard,
+  //       new BN(score)
+  //   );
     
-//     await client.sendAndConfirmTransaction(transactionIx, [authWallet]);
+  //   await client.sendAndConfirmTransaction(transactionIx, [authWallet]);
 
-//   } catch (error) {
-//     res.status(500).send(error.message);
-//   }
-// });
-
-
+  } catch (error: any) {
+    res.status(500).send(error.message);
+  }
+});
 
 
 app.listen(port, () => {
