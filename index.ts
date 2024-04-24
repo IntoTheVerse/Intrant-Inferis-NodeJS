@@ -20,7 +20,22 @@ const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
 
 //Soar
-import { Soar } from "./soar";
+import bs58 = require('bs58');
+import * as anchor from "@coral-xyz/anchor";
+import { SoarProgram } from "@magicblock-labs/soar-sdk";
+class SimpleProvider implements anchor.Provider {
+  readonly connection: web3.Connection;
+  readonly publicKey?: web3.PublicKey;
+
+  constructor(connection: web3.Connection, publicKey?: web3.PublicKey) {
+      this.connection = connection;
+      this.publicKey = publicKey;
+  }
+}
+
+const provider = new SimpleProvider(connection) as anchor.AnchorProvider;
+anchor.setProvider(provider);
+const soarClient = SoarProgram.get(provider);
 
 const config = {
     headers: {
@@ -164,6 +179,8 @@ const AllBuyablePowerups = [
   },
 ]
 
+const allXpLevels = [400, 1000, 1700, 2500, 3600, 5000];
+
 /* -------------------------------------------------------------------------- */
 /*                                Helper Code                                 */
 /* -------------------------------------------------------------------------- */
@@ -291,6 +308,15 @@ app.get("/getAllBuyablePowerups", async (req, res) => {
     res.status(500).send({ message: err });
   }
 });
+
+app.get("/getAllXpLevels", async (req, res) => {
+  try {
+    res.json(allXpLevels);
+  } catch (err) {
+    res.status(500).send({ message: err });
+  }
+});
+
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Get All Default Code                 */
@@ -1200,34 +1226,31 @@ app.put('/checkpointUpdate', async(req, res) => {
 
 app.post("/addSOARScore", async (req, res) => {
   try {
-    const { score, playerPK } = req.body;
-    // const authWallet = web3.Keypair.fromSecretKey(
-    //   bs58.decode(
-    //     "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
-    //   )
-    // );
-
-  //   const user = new web3.PublicKey(playerPK);
-  //   const playerAddress = soarClient.utils.derivePlayerAddress(user)[0];
-  //   const leaderboard = new web3.PublicKey(
-  //     "2bT4iEjFMRaTiopZp4PdfwkVB31g4j5EU4G1WxYRqR5d"
-  //   );
-  //   const scoresAddress = soarClient.utils.derivePlayerScoresListAddress(
-  //     user,
-  //     leaderboard
-  //   );
-
-  //   //Check if player exists
-
-  //   const transactionIx = soarClient
-  //     .submitScoreToLeaderBoard(
-  //       playerAddress,
-  //       authWallet,
-  //       leaderboard,
-  //       new BN(score)
-  //   );
+    const { score, playerPDA } = req.body;
+    const authWallet = web3.Keypair.fromSecretKey(
+      bs58.decode(
+        "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
+      )
+    );
     
-  //   await client.sendAndConfirmTransaction(transactionIx, [authWallet]);
+    const leaderboard = new web3.PublicKey(
+      "9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj"
+    );
+    
+    console.log(`1`);
+
+    const transactionIx = await soarClient
+      .submitScoreToLeaderBoard(
+        playerPDA,
+        authWallet.publicKey,
+        leaderboard,
+        new BN(score)
+    );
+
+    console.log(`TransactionTx : ${transactionIx}`);
+    
+    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet]);
+    res.json(sig);
 
   } catch (error: any) {
     res.status(500).send(error.message);
