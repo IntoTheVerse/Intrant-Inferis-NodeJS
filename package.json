@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.5",
+    "@types/bs58": "^4.0.4",
     "nodemon": "^3.1.0",
     "types-bn": "^0.0.1"
   }

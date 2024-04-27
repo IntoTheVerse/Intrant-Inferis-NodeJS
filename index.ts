@@ -1,5 +1,6 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
+import * as crypto from "crypto";
 
 dotenv.config();
 const app: express.Application = express();
@@ -9,10 +10,12 @@ app.use(express.json());
 
 // solana
 import web3 = require("@solana/web3.js");
+// import {clusterApiUrl, Connection, PublicKey} from '@solana/web3.js';
 import BN = require("bn.js");
 require('dotenv').config();
 const apiKey = process.env.apikey;
 const underdogKey = process.env.underdogkey;
+const leaderboardSecretKey = process.env.leaderboardSecretKey;
 
 // underdog API endpoint 
 const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
@@ -22,7 +25,9 @@ const connection = new web3.Connection(heliusUrl);
 //Soar
 import bs58 = require('bs58');
 import * as anchor from "@coral-xyz/anchor";
-import { SoarProgram } from "@magicblock-labs/soar-sdk";
+import { SoarProgram, InstructionBuilder, AccountsBuilder } from "@magicblock-labs/soar-sdk";
+
+
 class SimpleProvider implements anchor.Provider {
   readonly connection: web3.Connection;
   readonly publicKey?: web3.PublicKey;
@@ -1229,31 +1234,56 @@ app.post("/addSOARScore", async (req, res) => {
     const { score, playerPDA } = req.body;
     const authWallet = web3.Keypair.fromSecretKey(
       bs58.decode(
-        "4aecpyrADpd3LNaZqmxHbaB7FEDQi89AKPqHSY6k3Kk8JSYAtZQ26rwL77c4JpMdRpESAv9KSRQrLQUG9XdCmq2i"
+        `${leaderboardSecretKey}`
       )
     );
+    if (authWallet) {
+      console.log(`Auth Wallet Seckey: ${authWallet.secretKey} and Auth Wallet PubKey ${authWallet.publicKey}`)
+      console.log("Success 1");
+    }
     
-    const leaderboard = new web3.PublicKey(
+    const leaderboardKey = new web3.PublicKey(
       "9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj"
     );
+
+    let highEntropyBuffer = crypto.randomBytes(31);
+    let leaderboardAddressFromKey = await web3.PublicKey.createProgramAddress(
+      [highEntropyBuffer.slice(0, 31)],
+      leaderboardKey,
+    );
+
+    if (leaderboardKey) {
+      console.log(`Leaderboard: ${leaderboardKey.toBase58()}`);
+      console.log("Success 2");
+
+    }
     
-    console.log(`1`);
+    // const transaction = await this.builder
+    //   .andInitializePlayer({username, nftMeta}, user)
+    //   .andRegisterPlayerEntry(/*...*/)
+    //   .andSubmitScoreToLeaderboard(/*...*/)
+    //   .and(/*some other transaction*/)
+    //   .then((builder) => builder.build());
 
     const transactionIx = await soarClient
       .submitScoreToLeaderBoard(
-        playerPDA,
-        authWallet.publicKey,
-        leaderboard,
-        new BN(score)
+        playerPDA, // player's wallet address 
+        authWallet.publicKey, // address that deployed the contract that has the authority to put the score in the leaderboard
+        leaderboardAddressFromKey, // address of SOAR coontract or leaderboard PDA
+        new BN(score) // score to be updated inside the leaderboard
     );
 
-    console.log(`TransactionTx : ${transactionIx}`);
-    
-    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet]);
+    if (transactionIx) {
+      console.log(`TransactionTx : ${transactionIx}`);
+    } else {
+      console.log("error")
+    }
+
+    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet], {skipPreflight: true});
     res.json(sig);
 
-  } catch (error: any) {
-    res.status(500).send(error.message);
+  } catch (err) {
+      res.status(500).send({ message: err });
   }
 });
 
