@@ -1255,32 +1255,21 @@ app.post("/addSOARScore", async (req, res) => {
     if (leaderboardKey) {
       console.log(`Leaderboard: ${leaderboardKey.toBase58()}`);
       console.log("Success 2");
-
     }
     
-    // const transaction = await this.builder
-    //   .andInitializePlayer({username, nftMeta}, user)
-    //   .andRegisterPlayerEntry(/*...*/)
-    //   .andSubmitScoreToLeaderboard(/*...*/)
-    //   .and(/*some other transaction*/)
-    //   .then((builder) => builder.build());
-
     const transactionIx = await soarClient
       .submitScoreToLeaderBoard(
-        playerPDA, // player's wallet address 
+        playerPDA, // player's PDA associated with soar address 
         authWallet.publicKey, // address that deployed the contract that has the authority to put the score in the leaderboard
-        leaderboardAddressFromKey, // address of SOAR coontract or leaderboard PDA
+        leaderboardAddressFromKey, // leaderboard associated with soar
         new BN(score) // score to be updated inside the leaderboard
     );
+    
+    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet], {
+      skipPreflight: true,
+    });
 
-    if (transactionIx) {
-      console.log(`TransactionTx : ${transactionIx}`);
-    } else {
-      console.log("error")
-    }
-
-    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet], {skipPreflight: true});
-    res.json(sig);
+    console.log(sig);
 
   } catch (err) {
       res.status(500).send({ message: err });
