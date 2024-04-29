@@ -1,46 +1,28 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
-import * as crypto from "crypto";
 
 dotenv.config();
 const app: express.Application = express();
 const port = process.env.PORT || 8080;
-import axios, { AxiosResponse, AxiosRequestConfig, RawAxiosRequestHeaders } from 'axios';
+import axios from 'axios';
 app.use(express.json());
 
-// solana
+//Solana
 import web3 = require("@solana/web3.js");
-// import {clusterApiUrl, Connection, PublicKey} from '@solana/web3.js';
 import BN = require("bn.js");
 require('dotenv').config();
 const apiKey = process.env.apikey;
 const underdogKey = process.env.underdogkey;
-const leaderboardSecretKey = process.env.leaderboardSecretKey;
+const authWalletKey = process.env.authWalletKey;
 
-// underdog API endpoint 
+//Underdog API endpoint 
 const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
 const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
 
 //Soar
 import bs58 = require('bs58');
-import * as anchor from "@coral-xyz/anchor";
-import { SoarProgram, InstructionBuilder, AccountsBuilder } from "@magicblock-labs/soar-sdk";
-
-
-class SimpleProvider implements anchor.Provider {
-  readonly connection: web3.Connection;
-  readonly publicKey?: web3.PublicKey;
-
-  constructor(connection: web3.Connection, publicKey?: web3.PublicKey) {
-      this.connection = connection;
-      this.publicKey = publicKey;
-  }
-}
-
-const provider = new SimpleProvider(connection) as anchor.AnchorProvider;
-anchor.setProvider(provider);
-const soarClient = SoarProgram.get(provider);
+import { SoarProgram } from "@magicblock-labs/soar-sdk";
 
 const config = {
     headers: {
@@ -1231,48 +1213,30 @@ app.put('/checkpointUpdate', async(req, res) => {
 
 app.post("/addSOARScore", async (req, res) => {
   try {
-    const { score, playerPDA } = req.body;
-    const authWallet = web3.Keypair.fromSecretKey(
-      bs58.decode(
-        `${leaderboardSecretKey}`
-      )
-    );
-    if (authWallet) {
-      console.log(`Auth Wallet Seckey: ${authWallet.secretKey} and Auth Wallet PubKey ${authWallet.publicKey}`)
-      console.log("Success 1");
-    }
-    
-    const leaderboardKey = new web3.PublicKey(
-      "9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj"
-    );
+    const { score, playerPublicKey } = req.body;
 
-    let highEntropyBuffer = crypto.randomBytes(31);
-    let leaderboardAddressFromKey = await web3.PublicKey.createProgramAddress(
-      [highEntropyBuffer.slice(0, 31)],
-      leaderboardKey,
-    );
+    const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
+    const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
+    const leaderboardKey = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
 
-    if (leaderboardKey) {
-      console.log(`Leaderboard: ${leaderboardKey.toBase58()}`);
-      console.log("Success 2");
-    }
+    if (leaderboardKey) { console.log("Success 2"); }
     
     const transactionIx = await soarClient
       .submitScoreToLeaderBoard(
-        playerPDA, // player's PDA associated with soar address 
-        authWallet.publicKey, // address that deployed the contract that has the authority to put the score in the leaderboard
-        leaderboardAddressFromKey, // leaderboard associated with soar
-        new BN(score) // score to be updated inside the leaderboard
+        playerPublicKey,        // player's PDA associated with soar address
+        authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
+        leaderboardKey,         // leaderboard associated with soar [PublicKey]
+        new BN(parseInt(score)) // score to be updated inside the leaderboard
     );
-    
-    const sig = await soarClient.sendAndConfirmTransaction(transactionIx.transaction, [authWallet], {
-      skipPreflight: true,
-    });
 
+    const sig = await web3.sendAndConfirmTransaction(connection, transactionIx.transaction, [authWallet], {skipPreflight: true});
     console.log(sig);
-
-  } catch (err) {
-      res.status(500).send({ message: err });
+    res.send(sig);
+  }
+  catch (err)
+  {
+    console.log(err);
+    res.status(500).send({ message: err });
   }
 });
 
