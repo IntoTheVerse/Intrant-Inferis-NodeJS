@@ -1,5 +1,6 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
+const cron = require("node-cron"); 
 
 dotenv.config();
 const app: express.Application = express();
@@ -1213,23 +1214,35 @@ app.put('/checkpointUpdate', async(req, res) => {
 
 app.post("/addSOARScore", async (req, res) => {
   try {
-    const { score, playerPublicKey } = req.body;
+    const { scoreAllTime, scoreWeekly, playerPublicKey } = req.body;
 
     const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
     const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
-    const leaderboardKey = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
+    const leaderboardKeyAllTime = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
+    const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
 
-    if (leaderboardKey) { console.log("Success 2"); }
+    console.log(scoreAllTime);
+    console.log(scoreWeekly);
     
-    const transactionIx = await soarClient
+    const transactionIxAlTime = await soarClient
       .submitScoreToLeaderBoard(
-        playerPublicKey,        // player's PDA associated with soar address
+        playerPublicKey,        // player's address
         authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
-        leaderboardKey,         // leaderboard associated with soar [PublicKey]
-        new BN(parseInt(score)) // score to be updated inside the leaderboard
+        leaderboardKeyAllTime,         // leaderboard associated with soar [PublicKey]
+        new BN(parseInt(scoreAllTime)) // score to be updated inside the leaderboard
     );
 
-    const sig = await web3.sendAndConfirmTransaction(connection, transactionIx.transaction, [authWallet], {skipPreflight: true});
+    const transactionIxWeekly = await soarClient
+      .submitScoreToLeaderBoard(
+        playerPublicKey,        // player's address
+        authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
+        leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
+        new BN(parseInt(scoreWeekly)) // score to be updated inside the leaderboard
+    );
+
+    transactionIxAlTime.transaction.add(transactionIxWeekly.transaction);
+
+    const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
     console.log(sig);
     res.send(sig);
   }
@@ -1239,6 +1252,14 @@ app.post("/addSOARScore", async (req, res) => {
     res.status(500).send({ message: err });
   }
 });
+
+// function cronTest() { 
+//   cron.schedule("*/10 * * * * *", function () {
+
+//   });
+// }
+
+// cronTest();
 
 
 app.listen(port, () => {
