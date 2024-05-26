@@ -1212,6 +1212,14 @@ app.put('/checkpointUpdate', async(req, res) => {
 /*                                End of Checkpoints Code                     */
 /* -------------------------------------------------------------------------- */
 
+
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                                 Update score using SOAR code               */
+/* -------------------------------------------------------------------------- */
+
 app.post("/addSOARScore", async (req, res) => {
   try {
     const { scoreAllTime, scoreWeekly, playerPublicKey } = req.body;
@@ -1265,3 +1273,7 @@ app.post("/addSOARScore", async (req, res) => {
 app.listen(port, () => {
     console.log(`API server is listening on port ${port}`)
 })
+
+/* -------------------------------------------------------------------------- */
+/*                                End of SOAR code                            */
+/* -------------------------------------------------------------------------- */
