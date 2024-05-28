@@ -23,7 +23,7 @@ const connection = new web3.Connection(heliusUrl);
 
 //Soar
 import bs58 = require('bs58');
-import { SoarProgram } from "@magicblock-labs/soar-sdk";
+import { AccountsBuilder, SoarProgram } from "@magicblock-labs/soar-sdk";
 
 const config = {
     headers: {
@@ -168,6 +168,12 @@ const AllBuyablePowerups = [
 ]
 
 const allXpLevels = [400, 1000, 1700, 2500, 3600, 5000];
+const allRewardsLevels = [10_000, 8_000, 6_500, 5_000, 3_500, 2_000, 1_000, 800, 400, 100];
+
+interface Dictionary {
+  [key: string]: number;
+}
+let usersAndRewards: Dictionary = {};
 
 /* -------------------------------------------------------------------------- */
 /*                                Helper Code                                 */
@@ -300,6 +306,14 @@ app.get("/getAllBuyablePowerups", async (req, res) => {
 app.get("/getAllXpLevels", async (req, res) => {
   try {
     res.json(allXpLevels);
+  } catch (err) {
+    res.status(500).send({ message: err });
+  }
+});
+
+app.get("/getAllUsersWithRewards", async (req, res) => {
+  try {
+    res.json(usersAndRewards);
   } catch (err) {
     res.status(500).send({ message: err });
   }
@@ -1228,9 +1242,6 @@ app.post("/addSOARScore", async (req, res) => {
     const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
     const leaderboardKeyAllTime = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
     const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
-
-    console.log(scoreAllTime);
-    console.log(scoreWeekly);
     
     const transactionIxAlTime = await soarClient
       .submitScoreToLeaderBoard(
@@ -1261,14 +1272,74 @@ app.post("/addSOARScore", async (req, res) => {
   }
 });
 
-// function cronTest() { 
-//   cron.schedule("*/10 * * * * *", function () {
+app.post("/claimWeeklyReward", async (req, res) => {
+  try {
+    const { playerPublicKey } = req.body;
 
-//   });
-// }
+    //Distribute Reward
+    console.log("Reward : " + usersAndRewards[playerPublicKey]);
+    // const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
+    // console.log(sig);
+    // res.send(sig);
+    
+    delete usersAndRewards[playerPublicKey];
+  }
+  catch (err)
+  {
+    console.log(err);
+    res.status(500).send({ message: err });
+  }
+});
 
-// cronTest();
+async function SOARCron() { 
+  // cron.schedule("0 * * * 1", function () {
 
+  // });
+
+  usersAndRewards = {};
+  const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
+  const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
+  const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
+
+  const allWeeklyLeaderboardAccount = await soarClient.fetchLeaderBoardAccount(leaderboardKeyWeekly);
+  const allWeeklyToEntriesAccounts = await soarClient.fetchLeaderBoardTopEntriesAccount(allWeeklyLeaderboardAccount.topEntries as web3.PublicKey);
+  
+  for (let index = 0; index < allWeeklyToEntriesAccounts.topScores.length; index++) {
+    const player = allWeeklyToEntriesAccounts.topScores[index];
+    if (player.player.toString() != web3.PublicKey.default.toString()) { 
+      const playerAddress = (await soarClient.fetchPlayerAccount(player.player)).user;
+      const [playerScoresListAddress] = soarClient.utils.derivePlayerScoresListAddress(playerAddress, leaderboardKeyWeekly);
+      const playerScoresList = await soarClient.fetchPlayerScoresListAccount(playerScoresListAddress);
+      
+      var latestScore = 0;
+      var latestTimestamp = 0;
+      for (let index = 0; index < playerScoresList.scores.length; index++) {
+        const element = playerScoresList.scores[index];
+        if (latestTimestamp < element.timestamp) { 
+          latestTimestamp = element.timestamp;
+          latestScore = element.score;
+        }
+      }
+          
+      if (latestScore > 0) { 
+        const transactionIxWeekly = await soarClient
+        .submitScoreToLeaderBoard(
+            playerAddress,        // player's address
+            authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
+            leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
+            new BN(0) // score to be updated inside the leaderboard
+          );
+          
+        const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet]);
+        console.log(sig);
+          
+        usersAndRewards[playerAddress.toString()] = allRewardsLevels[index];
+      }
+    }
+  }
+}
+
+SOARCron();
 
 app.listen(port, () => {
     console.log(`API server is listening on port ${port}`)
