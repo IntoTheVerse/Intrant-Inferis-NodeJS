@@ -313,7 +313,7 @@ app.get("/getAllXpLevels", async (req, res) => {
 
 app.get("/getAllUsersWithRewards", async (req, res) => {
   try {
-    res.json(await createCollectionIfEmpty("WeeklyLeaderboard"));
+    res.json(await createCollectionIfEmpty("Weekly Leaderboard", "Bonk"));
   } catch (err) {
     console.error(err);
   }
@@ -323,12 +323,13 @@ app.get("/getAllUsersWithRewards", async (req, res) => {
 /*                                End of Get All Default Code                 */
 /* -------------------------------------------------------------------------- */
 
-async function createCollectionIfEmpty(collectionName: string): Promise<typeof leaderboard> { 
+async function createCollectionIfEmpty(collectionName: string, tokenName: string): Promise<typeof leaderboard> { 
   let mongoLeaderboard = await leaderboard.findOne({ eventName: collectionName });
   if (!mongoLeaderboard || mongoLeaderboard.eventName != collectionName) { 
     mongoLeaderboard = new leaderboard({
         _id: new mongoose.Types.ObjectId(),
-        eventName: collectionName,
+      eventName: collectionName,
+        tokenName: tokenName,
         leaderboardAddress: leaderboardKeyWeekly,
         data: []
     });
@@ -1070,15 +1071,34 @@ app.post("/addSOARScore", async (req, res) => {
 
 app.post("/claimWeeklyReward", async (req, res) => {
   try {
-    const { playerPublicKey } = req.body;
+    const { playerPublicKey, index } = req.body;
 
-    // //Distribute Reward
-    // console.log("Reward : " + usersAndRewards[playerPublicKey]);
-    // // const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
-    // // console.log(sig);
-    // // res.send(sig);
-    
-    // delete usersAndRewards[playerPublicKey];
+    var weeklyLeaderboard = await createCollectionIfEmpty("Weekly Leaderboard", "Bonk");
+    let user = null;
+    for (let i = 0; i < weeklyLeaderboard.data.length; i++) {
+      if (weeklyLeaderboard.data[i].userAddress == playerPublicKey) {
+        user = weeklyLeaderboard.data[i];
+      }
+    }
+
+    console.log("Getting " + user.userRewards[index] + weeklyLeaderboard.tokenName);
+    //Distribute Reward
+    // const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
+    // console.log(sig);
+    // res.send(sig);
+  
+    user.userRewards.splice(index, 1);
+    const updateResults = await leaderboard.updateOne(
+      { _id: weeklyLeaderboard._id },
+      { $set: { "data.$[i].userRewards": user.userRewards } },
+      {
+        arrayFilters: [{
+          "i._id": user._id
+        }]
+      }
+    );
+    console.log(updateResults);
+    res.json(updateResults);
   }
   catch (err)
   {
@@ -1088,11 +1108,7 @@ app.post("/claimWeeklyReward", async (req, res) => {
 });
 
 async function SOARCron() { 
-  // cron.schedule("0 * * * 1", function () {
-
-  // });
-
-  cron.schedule("*/30 * * * * *", async function () { 
+  cron.schedule("0 0 * * 1", async function () {
     const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
     const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
 
@@ -1119,16 +1135,16 @@ async function SOARCron() {
         if (latestScore > 0) { 
           const transactionIxWeekly = await soarClient
           .submitScoreToLeaderBoard(
-              playerAddress,        // player's address
-              authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
-              leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
-              new BN(0) // score to be updated inside the leaderboard
-            );
+            playerAddress,        // player's address
+            authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
+            leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
+            new BN(0) // score to be updated inside the leaderboard
+          );
             
-          const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet]);
+          const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet], {commitment: 'finalized'});
           console.log(sig);
 
-          var weeklyLeaderboard = await createCollectionIfEmpty("WeeklyLeaderboard");
+          var weeklyLeaderboard = await createCollectionIfEmpty("Weekly Leaderboard", "Bonk");
 
           let user = null;
           for (let i = 0; i < weeklyLeaderboard.data.length; i++) {
@@ -1162,8 +1178,8 @@ async function ConnectMongoDB() {
 
 ConnectMongoDB();
 SOARCron();
-mongoTest();
 
+mongoTest();
 async function mongoTest() { 
 
 }
