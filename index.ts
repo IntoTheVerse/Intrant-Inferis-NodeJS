@@ -30,6 +30,7 @@ const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q
 //MongoDB
 const mongoose = require("mongoose");
 import { leaderboard } from './schemas/leaderboardDataSchema';
+import { InferRawDocType, QueryWithHelpers } from 'mongoose';
 
 const config = {
     headers: {
@@ -322,7 +323,7 @@ app.get("/getAllUsersWithRewards", async (req, res) => {
 /*                                End of Get All Default Code                 */
 /* -------------------------------------------------------------------------- */
 
-async function createCollectionIfEmpty(collectionName: string): Promise<Object> { 
+async function createCollectionIfEmpty(collectionName: string): Promise<typeof leaderboard> { 
   let mongoLeaderboard = await leaderboard.findOne({ eventName: collectionName });
   if (!mongoLeaderboard || mongoLeaderboard.eventName != collectionName) { 
     mongoLeaderboard = new leaderboard({
@@ -1090,54 +1091,69 @@ async function SOARCron() {
   // cron.schedule("0 * * * 1", function () {
 
   // });
-  const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
-  const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
 
-  const allWeeklyLeaderboardAccount = await soarClient.fetchLeaderBoardAccount(leaderboardKeyWeekly);
-  const allWeeklyToEntriesAccounts = await soarClient.fetchLeaderBoardTopEntriesAccount(allWeeklyLeaderboardAccount.topEntries as web3.PublicKey);
-  
-  for (let index = 0; index < allWeeklyToEntriesAccounts.topScores.length; index++) {
-    const player = allWeeklyToEntriesAccounts.topScores[index];
-    if (player.player.toString() != web3.PublicKey.default.toString()) { 
-      const playerAddress = (await soarClient.fetchPlayerAccount(player.player)).user;
-      const [playerScoresListAddress] = soarClient.utils.derivePlayerScoresListAddress(playerAddress, leaderboardKeyWeekly);
-      const playerScoresList = await soarClient.fetchPlayerScoresListAccount(playerScoresListAddress);
-      
-      var latestScore = 0;
-      var latestTimestamp = 0;
-      for (let index = 0; index < playerScoresList.scores.length; index++) {
-        const element = playerScoresList.scores[index];
-        if (latestTimestamp < element.timestamp) { 
-          latestTimestamp = element.timestamp;
-          latestScore = element.score;
-        }
-      }
-          
-      if (latestScore > 0) { 
-        const transactionIxWeekly = await soarClient
-        .submitScoreToLeaderBoard(
-            playerAddress,        // player's address
-            authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
-            leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
-            new BN(0) // score to be updated inside the leaderboard
-          );
-          
-        const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet]);
-        console.log(sig);
+  cron.schedule("*/30 * * * * *", async function () { 
+    const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
+    const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
 
-        console.log(await leaderboard.find());
+    const allWeeklyLeaderboardAccount = await soarClient.fetchLeaderBoardAccount(leaderboardKeyWeekly);
+    const allWeeklyToEntriesAccounts = await soarClient.fetchLeaderBoardTopEntriesAccount(allWeeklyLeaderboardAccount.topEntries as web3.PublicKey);
+    
+    for (let index = 0; index < allWeeklyToEntriesAccounts.topScores.length; index++) {
+      const player = allWeeklyToEntriesAccounts.topScores[index];
+      if (player.player.toString() != web3.PublicKey.default.toString()) { 
+        const playerAddress = (await soarClient.fetchPlayerAccount(player.player)).user;
+        const [playerScoresListAddress] = soarClient.utils.derivePlayerScoresListAddress(playerAddress, leaderboardKeyWeekly);
+        const playerScoresList = await soarClient.fetchPlayerScoresListAccount(playerScoresListAddress);
         
-        var weeklyLeaderboard = await createCollectionIfEmpty("WeeklyLeaderboard");
-        let user = null;
-        for (let i = 0; i < weeklyLeaderboard.data.length; i++) {
-          if (guildProfile.data[i].userTag == interaction.user.tag) {
-            user = guildProfile.data[i];
+        var latestScore = 0;
+        var latestTimestamp = 0;
+        for (let index = 0; index < playerScoresList.scores.length; index++) {
+          const element = playerScoresList.scores[index];
+          if (latestTimestamp < element.timestamp) { 
+            latestTimestamp = element.timestamp;
+            latestScore = element.score;
           }
         }
-        //usersAndRewards[playerAddress.toString()] = allRewardsLevels[index];
+            
+        if (latestScore > 0) { 
+          const transactionIxWeekly = await soarClient
+          .submitScoreToLeaderBoard(
+              playerAddress,        // player's address
+              authWallet.publicKey,   // address that deployed the contract that has the authority to put the score in the leaderboard
+              leaderboardKeyWeekly,         // weekly leaderboard associated with soar [PublicKey]
+              new BN(0) // score to be updated inside the leaderboard
+            );
+            
+          const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet]);
+          console.log(sig);
+
+          var weeklyLeaderboard = await createCollectionIfEmpty("WeeklyLeaderboard");
+
+          let user = null;
+          for (let i = 0; i < weeklyLeaderboard.data.length; i++) {
+            if (weeklyLeaderboard.data[i].userAddress == playerAddress) {
+              user = weeklyLeaderboard.data[i];
+            }
+          }
+
+          if (user != null) {
+            if (user.userAddress == playerAddress) { 
+              user.userRewards.push(allRewardsLevels[index]);
+            }
+          }
+          else { 
+            weeklyLeaderboard.data.push({
+              userAddress: playerAddress,
+              userRewards: [allRewardsLevels[index]],
+            });
+          }
+
+          await weeklyLeaderboard.save().catch(console.error);
+        }
       }
     }
-  }
+  });
 }
 
 async function ConnectMongoDB() {
@@ -1149,7 +1165,7 @@ SOARCron();
 mongoTest();
 
 async function mongoTest() { 
-  console.log(await createCollectionIfEmpty("WeeklyLeaderboard"));
+
 }
 
 app.listen(port, () => {
