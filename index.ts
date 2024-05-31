@@ -24,11 +24,12 @@ const connection = new web3.Connection(heliusUrl);
 //Soar
 import bs58 = require('bs58');
 import { SoarProgram } from "@magicblock-labs/soar-sdk";
+const leaderboardKeyAllTime = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
+const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
 
 //MongoDB
 const mongoose = require("mongoose");
-import { player } from './schemas/leaderboardDataSchema';
-//const LeaderboardSchema = require('./schemas/leaderboardDataSchema');
+import { leaderboard } from './schemas/leaderboardDataSchema';
 
 const config = {
     headers: {
@@ -175,11 +176,6 @@ const AllBuyablePowerups = [
 const allXpLevels = [400, 1000, 1700, 2500, 3600, 5000];
 const allRewardsLevels = [10_000, 8_000, 6_500, 5_000, 3_500, 2_000, 1_000, 800, 400, 100];
 
-interface Dictionary {
-  [key: string]: number;
-}
-let usersAndRewards: Dictionary = {};
-
 /* -------------------------------------------------------------------------- */
 /*                                Helper Code                                 */
 /* -------------------------------------------------------------------------- */
@@ -316,18 +312,30 @@ app.get("/getAllXpLevels", async (req, res) => {
 
 app.get("/getAllUsersWithRewards", async (req, res) => {
   try {
-    res.json(usersAndRewards);
+    res.json(await createCollectionIfEmpty("WeeklyLeaderboard"));
   } catch (err) {
-    res.status(500).send({ message: err });
+    console.error(err);
   }
 });
-
 
 /* -------------------------------------------------------------------------- */
 /*                                End of Get All Default Code                 */
 /* -------------------------------------------------------------------------- */
 
+async function createCollectionIfEmpty(collectionName: string): Promise<Object> { 
+  let mongoLeaderboard = await leaderboard.findOne({ eventName: collectionName });
+  if (!mongoLeaderboard || mongoLeaderboard.eventName != collectionName) { 
+    mongoLeaderboard = new leaderboard({
+        _id: new mongoose.Types.ObjectId(),
+        eventName: collectionName,
+        leaderboardAddress: leaderboardKeyWeekly,
+        data: []
+    });
 
+    await mongoLeaderboard.save().catch(console.error);
+  }
+  return mongoLeaderboard;
+}
 
 /* -------------------------------------------------------------------------- */
 /*                                Warrior Code                                */
@@ -1029,8 +1037,6 @@ app.post("/addSOARScore", async (req, res) => {
 
     const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
     const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
-    const leaderboardKeyAllTime = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
-    const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
     
     const transactionIxAlTime = await soarClient
       .submitScoreToLeaderBoard(
@@ -1065,13 +1071,13 @@ app.post("/claimWeeklyReward", async (req, res) => {
   try {
     const { playerPublicKey } = req.body;
 
-    //Distribute Reward
-    console.log("Reward : " + usersAndRewards[playerPublicKey]);
-    // const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
-    // console.log(sig);
-    // res.send(sig);
+    // //Distribute Reward
+    // console.log("Reward : " + usersAndRewards[playerPublicKey]);
+    // // const sig = await web3.sendAndConfirmTransaction(connection, transactionIxAlTime.transaction, [authWallet]);
+    // // console.log(sig);
+    // // res.send(sig);
     
-    delete usersAndRewards[playerPublicKey];
+    // delete usersAndRewards[playerPublicKey];
   }
   catch (err)
   {
@@ -1084,11 +1090,8 @@ async function SOARCron() {
   // cron.schedule("0 * * * 1", function () {
 
   // });
-
-  usersAndRewards = {};
   const authWallet = web3.Keypair.fromSecretKey(bs58.decode(`${authWalletKey}`));
   const soarClient = SoarProgram.getFromConnection(connection, authWallet.publicKey);
-  const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
 
   const allWeeklyLeaderboardAccount = await soarClient.fetchLeaderBoardAccount(leaderboardKeyWeekly);
   const allWeeklyToEntriesAccounts = await soarClient.fetchLeaderBoardTopEntriesAccount(allWeeklyLeaderboardAccount.topEntries as web3.PublicKey);
@@ -1121,17 +1124,33 @@ async function SOARCron() {
           
         const sig = await web3.sendAndConfirmTransaction(connection, transactionIxWeekly.transaction, [authWallet]);
         console.log(sig);
-          
-        usersAndRewards[playerAddress.toString()] = allRewardsLevels[index];
+
+        console.log(await leaderboard.find());
+        
+        var weeklyLeaderboard = await createCollectionIfEmpty("WeeklyLeaderboard");
+        let user = null;
+        for (let i = 0; i < weeklyLeaderboard.data.length; i++) {
+          if (guildProfile.data[i].userTag == interaction.user.tag) {
+            user = guildProfile.data[i];
+          }
+        }
+        //usersAndRewards[playerAddress.toString()] = allRewardsLevels[index];
       }
     }
   }
 }
 
-(async () => {
+async function ConnectMongoDB() {
   await mongoose.connect(process.env.databaseToken).catch(console.error);
-}); 
+}; 
+
+ConnectMongoDB();
 SOARCron();
+mongoTest();
+
+async function mongoTest() { 
+  console.log(await createCollectionIfEmpty("WeeklyLeaderboard"));
+}
 
 app.listen(port, () => {
     console.log(`API server is listening on port ${port}`)

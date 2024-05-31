@@ -1,5 +1,5 @@
 const { Schema, model, connect } = require("mongoose");
-const userRewardType = require("./types/userRewardType");
+import { userRewardType } from '../types/userRewardType';
 
 const leaderboardDataSchema = new Schema({
   _id: Schema.Types.ObjectId,
@@ -8,7 +8,7 @@ const leaderboardDataSchema = new Schema({
   data: [userRewardType],
 });
 
-export const player = model(
+export const leaderboard = model(
   "Leaderboards",
   leaderboardDataSchema,
   "WeeklyLeaderboard"
