@@ -23,7 +23,12 @@ const connection = new web3.Connection(heliusUrl);
 
 //Soar
 import bs58 = require('bs58');
-import { AccountsBuilder, SoarProgram } from "@magicblock-labs/soar-sdk";
+import { SoarProgram } from "@magicblock-labs/soar-sdk";
+
+//MongoDB
+const mongoose = require("mongoose");
+import { LeaderboardSchema } from './schemas/leaderboardDataSchema';
+//const LeaderboardSchema = require('./schemas/leaderboardDataSchema');
 
 const config = {
     headers: {
@@ -235,7 +240,6 @@ app.get<{ pId: number, NftId: number },{}>("/searchByNFTId/:pId&:NftId", async (
         console.error(error);
       });
   } catch(err) {
-    // res.status(500).send(error.message);
     res.status(500).send({ message: err });
   }
 });
@@ -265,7 +269,6 @@ app.get<{ pId: number, playerAddress: string },{}>("/getCollectionByOwner/:pId&:
         console.error(error);
       });
   } catch(err) {
-    // res.status(500).send(error.message);
       res.status(500).send({ message: err });
   }
 });
@@ -331,40 +334,6 @@ app.get("/getAllUsersWithRewards", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 /* ------------------------------ Mint Warrior ------------------------------ */
-// const options = {
-        //   method: 'POST',
-        //   url: `${underdogApiEndpoint}/v2/projects/46/nfts`,
-        //   headers: {
-        //     accept: 'application/json',
-        //     'content-type': 'application/json',
-        //     authorization: `Bearer ${underdogKey}`
-        //   },
-          // data: {
-          //   name: 'Tennon',
-          //   symbol: 'INFERIS',
-          //   description: 'The might Tennon',
-          //   image: 'https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png',
-          //   delegated: true
-          // },
-        //   data: {
-        //     name: character.name,
-        //     symbol: "INFERIS",
-        //     description: character.description,
-        //     image: character.image,
-        //     attributes: character.attributes,
-        //     receiver: { address: receiver },
-        //     delegated: true,
-        //   }
-        // };
-        
-        // axios
-        //   .request(options)
-        //   .then(function (response) {
-        //     console.log(response.data);
-        //   })
-        //   .catch(function (error) {
-        //     console.error(error);
-        //   });
 
 app.post('/warrior', async(req, res) => {
     try {
@@ -405,21 +374,6 @@ app.post('/warrior', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveNFT.data.status !== 'confirmed');
-
-        // // // signatures
-        // // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("BUgx6ymLXi18voRodEV8AFsieVu7nXZ7iXsXiDfdkjDG"), {
-        // //     commitment: 'confirmed'
-        // // });
-
-        // // const transactionDetails = await connection.getParsedTransaction(
-        // //     signatures[0].signature,
-        // //     {
-        // //         commitment: "confirmed",
-        // //         encoding: "jsonParsed",
-        // //         maxSupportedTransactionVersion: 0,
-
-        // //     }
-        // // )
 
         let warriorData = {
             "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
@@ -521,45 +475,6 @@ app.put('/warriorUpdate', async(req, res) => {
 
 /* ------------------------------ mint theracode during collection from the game ------------------------------ */
 
-
-// app.post('/theracode', async(req, res) => {
-//   try {
-//       const { receiver } = req.body;
-//       const options = {
-//         method: 'POST',
-//         url: `${underdogApiEndpoint}/v2/projects/41/nfts`,
-//         headers: {
-//           accept: 'application/json',
-//           'content-type': 'application/json',
-//           authorization: `Bearer ${underdogKey}`
-//         },
-        
-//         data: {
-//           name: 'Theracode',
-//           symbol: 'THERACODE',
-//           description: 'Floating Theracode that reveals binary numbers.',
-//           image: 'https://i.postimg.cc/YCgY7ZB8/theracode.png',
-//           attributes: { color: 'blue' },
-//           receiver: { address: receiver },
-//           delegated: true,
-//         }
-//       };
-      
-//       axios
-//         .request(options)
-//         .then(function (response) {
-//           console.log(response.data);
-//         })
-//         .catch(function (error) {
-//           console.error(error);
-//         });
-//   } 
-//   catch (err) {
-//     res.status(500).send({ message: err });
-
-//   }
-// })
-
 app.post('/theracode', async(req, res) => {
     try {
         const { receiver } = req.body;
@@ -596,21 +511,6 @@ app.post('/theracode', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveTheracode.data.status !== 'confirmed');
-
-        // // signatures
-        // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu"), {
-        //     commitment: 'confirmed'
-        // });
-
-        // const transactionDetails = await connection.getParsedTransaction(
-        //     signatures[0].signature,
-        //     {
-        //         commitment: "confirmed",
-        //         encoding: "jsonParsed",
-        //         maxSupportedTransactionVersion: 0,
-
-        //     }
-        // )
 
         let theracodeData = {
             "theracodeData" : `${(JSON.stringify(retrieveTheracode.data))}`,
@@ -674,21 +574,6 @@ app.post('/therabox', async(req, res) => {
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveTheraBox.data.status !== 'confirmed');
 
-        // // signatures
-        // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("3kBNqm4TTgpxJmGhhBQzgMDWVtEkDo4hKQHEzB5cZgk3"), {
-        //     commitment: 'confirmed'
-        // });
-
-        // const transactionDetails = await connection.getParsedTransaction(
-        //     signatures[0].signature,
-        //     {
-        //         commitment: "confirmed",
-        //         encoding: "jsonParsed",
-        //         maxSupportedTransactionVersion: 0,
-
-        //     }
-        // )
-
         let theraboxData = {
             "theraboxData" : `${(JSON.stringify(retrieveTheraBox.data))}`,
             "nftId" : `${createTheraBoxResponse.data.nftId}`,
@@ -746,21 +631,6 @@ app.post('/scroll', async(req, res) => {
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveScroll.data.status !== 'confirmed');
-
-        // // signatures
-        // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("87JYTfmZS5FYwLZ8q7mdSd5TCUmZMuNZDvqSvrjcadob"), {
-        //     commitment: 'confirmed'
-        // });
-
-        // const transactionDetails = await connection.getParsedTransaction(
-        //     signatures[0].signature,
-        //     {
-        //         commitment: "confirmed",
-        //         encoding: "jsonParsed",
-        //         maxSupportedTransactionVersion: 0,
-
-        //     }
-        // )
 
         let scrollData = {
             "scrollData" : `${(JSON.stringify(retrieveScroll.data))}`,
@@ -825,21 +695,6 @@ app.post('/potion', async(req, res) => {
             await new Promise( resolve => setTimeout(resolve, 100));
         } while(retrieveElixir.data.status !== 'confirmed');
 
-        // // signatures
-        // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"), {
-        //     commitment: 'confirmed'
-        // });
-
-        // const transactionDetails = await connection.getParsedTransaction(
-        //     signatures[0].signature,
-        //     {
-        //         commitment: "confirmed",
-        //         encoding: "jsonParsed",
-        //         maxSupportedTransactionVersion: 0,
-
-        //     }
-        // )
-
         let elixirData = {
             "elixirData" : `${(JSON.stringify(retrieveElixir.data))}`,
             "nftId" : `${createElixirResponse.data.nftId}`,
@@ -896,23 +751,6 @@ app.post("/burnAndMintPotion", async (req, res) => {
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     } while (retrieveElixir.data.status !== "confirmed");
-
-    // // signatures
-    // const signatures = await connection.getSignaturesForAddress(
-    //   new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs"),
-    //   {
-    //     commitment: "confirmed",
-    //   }
-    // );
-
-    // const transactionDetails = await connection.getParsedTransaction(
-    //   signatures[0].signature,
-    //   {
-    //     commitment: "confirmed",
-    //     encoding: "jsonParsed",
-    //     maxSupportedTransactionVersion: 0,
-    //   }
-    // );
 
     let elixirData = {
       elixirData: `${JSON.stringify(retrieveElixir.data)}`,
@@ -994,23 +832,6 @@ app.post("/powerup", async (req, res) => {
       await new Promise((resolve) => setTimeout(resolve, 100));
     } while (retrievePowerUp.data.status !== "confirmed");
 
-    // // signatures
-    // const signatures = await connection.getSignaturesForAddress(
-    //   new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk"),
-    //   {
-    //     commitment: "confirmed",
-    //   }
-    // );
-
-    // const transactionDetails = await connection.getParsedTransaction(
-    //   signatures[0].signature,
-    //   {
-    //     commitment: "confirmed",
-    //     encoding: "jsonParsed",
-    //     maxSupportedTransactionVersion: 0,
-    //   }
-    // );
-
     let powerupdata = {
       powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
       nftId: `${createPowerUpResponse.data.nftId}`,
@@ -1066,23 +887,6 @@ app.post("/burnAndMintPowerup", async (req, res) => {
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     } while (retrievePowerUp.data.status !== "confirmed");
-
-    // // signatures
-    // const signatures = await connection.getSignaturesForAddress(
-    //   new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk"),
-    //   {
-    //     commitment: "confirmed",
-    //   }
-    // );
-
-    // const transactionDetails = await connection.getParsedTransaction(
-    //   signatures[0].signature,
-    //   {
-    //     commitment: "confirmed",
-    //     encoding: "jsonParsed",
-    //     maxSupportedTransactionVersion: 0,
-    //   }
-    // );
 
     let powerupdata = {
       powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
@@ -1152,21 +956,6 @@ app.post('/checkpoint', async(req, res) => {
           );
           await new Promise( resolve => setTimeout(resolve, 100));
       } while(retrieveCheckpoint.data.status !== 'confirmed');
-
-      // // signatures
-      // const signatures = await connection.getSignaturesForAddress(new web3.PublicKey("3UaUDWGurbHPxMXixj2Gup9XjVafZ2Lf3XdnUoRmHZFc"), {
-      //     commitment: 'confirmed'
-      // });
-
-      // const transactionDetails = await connection.getParsedTransaction(
-      //     signatures[0].signature,
-      //     {
-      //         commitment: "confirmed",
-      //         encoding: "jsonParsed",
-      //         maxSupportedTransactionVersion: 0,
-
-      //     }
-      // )
 
       let checkpointData = {
           "checkpointData" : `${(JSON.stringify(retrieveCheckpoint.data))}`,
@@ -1339,6 +1128,9 @@ async function SOARCron() {
   }
 }
 
+(async () => {
+  await mongoose.connect(process.env.databaseToken).catch(console.error);
+}); 
 SOARCron();
 
 app.listen(port, () => {
