@@ -1,4 +1,4 @@
-const { Schema, model } = require("mongoose");
+const { Schema, model, connect } = require("mongoose");
 const userRewardType = require("./types/userRewardType");
 
 const leaderboardDataSchema = new Schema({
@@ -8,7 +8,7 @@ const leaderboardDataSchema = new Schema({
   data: [userRewardType],
 });
 
-module.exports = model(
+export const player = model(
   "Leaderboards",
   leaderboardDataSchema,
   "WeeklyLeaderboard"

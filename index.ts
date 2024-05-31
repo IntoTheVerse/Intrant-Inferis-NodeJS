@@ -27,7 +27,7 @@ import { SoarProgram } from "@magicblock-labs/soar-sdk";
 
 //MongoDB
 const mongoose = require("mongoose");
-import { LeaderboardSchema } from './schemas/leaderboardDataSchema';
+import { player } from './schemas/leaderboardDataSchema';
 //const LeaderboardSchema = require('./schemas/leaderboardDataSchema');
 
 const config = {
