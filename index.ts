@@ -1171,11 +1171,11 @@ async function SOARCron() {
   });
 }
 
-ConnectMongoDB();
 async function ConnectMongoDB() {
-  await mongoose.connect(process.env.databaseToken).catch(console.error);
+  await mongoose.connect(process.env.databaseToken as string).catch(console.error);
 }; 
 
+ConnectMongoDB();
 SOARCron();
 
 app.listen(port, () => {
