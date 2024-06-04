@@ -24,13 +24,12 @@ const connection = new web3.Connection(heliusUrl);
 //Soar
 import bs58 = require('bs58');
 import { SoarProgram } from "@magicblock-labs/soar-sdk";
-const leaderboardKeyAllTime = new web3.PublicKey("9emNU9UQ7ro82vrnB2Dj7kun7wZ7a22cNyVLbszHaZsj");
-const leaderboardKeyWeekly = new web3.PublicKey("CDBUBRWwZyy9eJJd73RcVshWgd9Go4Q3u4CiVA8GxniU");
+const leaderboardKeyAllTime = new web3.PublicKey(process.env.leaderboardKeyAllTime as string);
+const leaderboardKeyWeekly = new web3.PublicKey(process.env.leaderboardKeyWeekly as string);
 
 //MongoDB
 const mongoose = require("mongoose");
 import { leaderboard } from './schemas/leaderboardDataSchema';
-import { InferRawDocType, QueryWithHelpers } from 'mongoose';
 
 const config = {
     headers: {
@@ -184,23 +183,23 @@ const allRewardsLevels = [10_000, 8_000, 6_500, 5_000, 3_500, 2_000, 1_000, 800,
 /* ------------------------------ Burn NFT ------------------------------ */
 
 async function burnAsset(assetcollectionId: number, assetId: any) {
-    const options = {
-        method: 'POST',
-        url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/${assetId}/burn`,
-        headers: {
-          accept: 'application/json',
-          authorization: `Bearer ${underdogKey}`
-        }
-    };
-      
-      axios
-        .request(options)
-        .then(function (response: { data: any; }) {
-          console.log(response.data);
-        })
-        .catch(function (error: any) {
-          console.error(error);
-        });
+  const options = {
+    method: 'POST',
+    url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/${assetId}/burn`,
+    headers: {
+      accept: 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    }
+  };
+    
+  axios
+    .request(options)
+    .then(function (response: { data: any; }) {
+      console.log(response.data);
+    })
+    .catch(function (error: any) {
+      console.error(error);
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -327,11 +326,11 @@ async function createCollectionIfEmpty(collectionName: string, tokenName: string
   let mongoLeaderboard = await leaderboard.findOne({ eventName: collectionName });
   if (!mongoLeaderboard || mongoLeaderboard.eventName != collectionName) { 
     mongoLeaderboard = new leaderboard({
-        _id: new mongoose.Types.ObjectId(),
+      _id: new mongoose.Types.ObjectId(),
       eventName: collectionName,
-        tokenName: tokenName,
-        leaderboardAddress: leaderboardKeyWeekly,
-        data: []
+      tokenName: tokenName,
+      leaderboardAddress: leaderboardKeyWeekly,
+      data: []
     });
 
     await mongoLeaderboard.save().catch(console.error);
@@ -346,57 +345,57 @@ async function createCollectionIfEmpty(collectionName: string, tokenName: string
 /* ------------------------------ Mint Warrior ------------------------------ */
 
 app.post('/warrior', async(req, res) => {
-    try {
-        const { receiver, id } = req.body;
-        const character = AllBuyableWarriors[id];
+  try {
+    const { receiver, id } = req.body;
+    const character = AllBuyableWarriors[id];
 
-        const nftData = {
-          name: character.name,
-          symbol: "INFERIS",
-          description: character.description,
-          image: character.image,
-          attributes: character.attributes,
-          receiver: { address: receiver },
-          delegated: true,
-        };
+    const nftData = {
+      name: character.name,
+      symbol: "INFERIS",
+      description: character.description,
+      image: character.image,
+      attributes: character.attributes,
+      receiver: { address: receiver },
+      delegated: true,
+    };
 
-        
-        let projectAccountInfo = null;
+    
+    let projectAccountInfo = null;
 
-        while (!projectAccountInfo) {
-            projectAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("BUgx6ymLXi18voRodEV8AFsieVu7nXZ7iXsXiDfdkjDG")
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        }
+    while (!projectAccountInfo) {
+      projectAccountInfo = await connection.getAccountInfo(
+        new web3.PublicKey(process.env.warriorCollection as string)
+      );
+      await new Promise( resolve => setTimeout(resolve, 100));
+    }
 
-        const createNftResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/46/nfts`,
-            nftData,
+    const createNftResponse = await axios.post(
+        `${underdogApiEndpoint}/v2/projects/46/nfts`,
+        nftData,
+        config
+    );
+    
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/46/nfts/${createNftResponse.data.nftId}`,
             config
         );
-        
-        let retrieveNFT;
-        do {
-            retrieveNFT = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/46/nfts/${createNftResponse.data.nftId}`,
-                config
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        } while(retrieveNFT.data.status !== 'confirmed');
+        await new Promise( resolve => setTimeout(resolve, 100));
+    } while(retrieveNFT.data.status !== 'confirmed');
 
-        let warriorData = {
-            "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
-            "nftId" : `${createNftResponse.data.nftId}`,
-        }
-        console.log(warriorData);
-
-
-        res.json(warriorData);
-    } 
-    catch (err) {
-      res.status(500).send({ message: err });
+    let warriorData = {
+        "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+        "nftId" : `${createNftResponse.data.nftId}`,
     }
+    console.log(warriorData);
+
+
+    res.json(warriorData);
+  } 
+  catch (err) {
+    res.status(500).send({ message: err });
+  }
 })
 
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
@@ -502,7 +501,7 @@ app.post('/theracode', async(req, res) => {
 
         while (!theracodeAccountInfo) {
             theracodeAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("2zxjm5qZHx9RyubAqSyfoidLW1sReyEktbnRWd9YtGwu")
+              new web3.PublicKey(process.env.theracodeCollection as string)
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
@@ -564,7 +563,7 @@ app.post('/therabox', async(req, res) => {
 
         while (!theraboxAccountInfo) {
             theraboxAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("3kBNqm4TTgpxJmGhhBQzgMDWVtEkDo4hKQHEzB5cZgk3")
+              new web3.PublicKey(process.env.theraboxCollection as string)
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
@@ -622,7 +621,7 @@ app.post('/scroll', async(req, res) => {
 
         while (!scrollAccountInfo) {
             scrollAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("87JYTfmZS5FYwLZ8q7mdSd5TCUmZMuNZDvqSvrjcadob")
+              new web3.PublicKey(process.env.scrollColletion as string)
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
@@ -685,7 +684,7 @@ app.post('/potion', async(req, res) => {
 
         while (!elixirAccountInfo) {
             elixirAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+              new web3.PublicKey(process.env.potionCollection as string)
             );
             await new Promise( resolve => setTimeout(resolve, 100));
         }
@@ -742,7 +741,7 @@ app.post("/burnAndMintPotion", async (req, res) => {
 
     while (!elixirAccountInfo) {
       elixirAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey("EaFpGsrrA9SY9sQmaKvU2tteUbMLdrADAscXwtUh9zZs")
+        new web3.PublicKey(process.env.potionCollection as string)
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -822,7 +821,7 @@ app.post("/powerup", async (req, res) => {
 
     while (!powerUpAccountInfo) {
       powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk")
+        new web3.PublicKey(process.env.powerupColletion as string)
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -878,7 +877,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
 
     while (!powerUpAccountInfo) {
       powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey("9vX76TVAn9ELJCWFNckF31i5MESukJkpztoEG2AtP6Tk")
+        new web3.PublicKey(process.env.powerupColletion as string)
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
@@ -947,7 +946,7 @@ app.post('/checkpoint', async(req, res) => {
 
       while (!checkpointAccountInfo) {
         checkpointAccountInfo = await connection.getAccountInfo(
-            new web3.PublicKey("3UaUDWGurbHPxMXixj2Gup9XjVafZ2Lf3XdnUoRmHZFc")
+            new web3.PublicKey(process.env.checkpointCollection as string)
           );
           await new Promise( resolve => setTimeout(resolve, 100));
       }
@@ -1172,17 +1171,12 @@ async function SOARCron() {
   });
 }
 
+ConnectMongoDB();
 async function ConnectMongoDB() {
   await mongoose.connect(process.env.databaseToken).catch(console.error);
 }; 
 
-ConnectMongoDB();
 SOARCron();
-
-mongoTest();
-async function mongoTest() { 
-
-}
 
 app.listen(port, () => {
     console.log(`API server is listening on port ${port}`)
