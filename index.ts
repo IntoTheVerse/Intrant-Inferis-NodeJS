@@ -23,7 +23,7 @@ const connection = new web3.Connection(heliusUrl);
 
 //Soar
 import bs58 = require('bs58');
-import { SoarProgram } from "@magicblock-labs/soar-sdk";
+import { SoarProgram, GameType, Genre } from "@magicblock-labs/soar-sdk";
 const leaderboardKeyAllTime = new web3.PublicKey(process.env.leaderboardKeyAllTime as string);
 const leaderboardKeyWeekly = new web3.PublicKey(process.env.leaderboardKeyWeekly as string);
 
@@ -1026,6 +1026,34 @@ app.put('/checkpointUpdate', async(req, res) => {
 
 
 
+/* -------------------------------------------------------------------------- */
+/*                                 Create Game SOAR code                      */
+/* -------------------------------------------------------------------------- */
+
+app.post("/createSOARGame", async (req, res) => {
+  const authGameCreationauthWallet = web3.Keypair.fromSecretKey(bs58.decode(`${process.env.authGameCreationWalletKey}`));
+  const soarClient = SoarProgram.getFromConnection(connection, authGameCreationauthWallet.publicKey);
+  const keypair = web3.Keypair.generate();
+
+  let game = keypair;
+  let title = "Intrant Inferis (mainnet alpha)";
+  let description = "Intrant Inferis is a mobile rogue-action dungeon RPG adventure game built on Solana!";
+  let genre = Genre.RPG;
+  let gameType = GameType.Mobile; 
+  let nftMeta = new web3.PublicKey("DpFHvFR5nJX1zouUkBtfs7YLLZE59RyniUXekm8LFPA8");
+  //let _auths = auths.map((keypair) => keypair.publicKey);
+  let _auths = [new web3.PublicKey("RANTmqxU5E3cH2ED9eSXJyRePUUPUFLjRFu3VuBDApG")];
+
+  // Retrieve the bundled transaction.
+  let { newGame, transaction } = await soarClient.initializeNewGame(game.publicKey, title, description, genre, gameType, nftMeta, _auths);
+  // Send and confirm the transaction with the game keypair as signer. 
+  await soarClient.sendAndConfirmTransaction(transaction, [game]);
+});
+
+
+/* -------------------------------------------------------------------------- */
+/*                                 End of Game SOAR code                      */
+/* -------------------------------------------------------------------------- */
 
 
 /* -------------------------------------------------------------------------- */
