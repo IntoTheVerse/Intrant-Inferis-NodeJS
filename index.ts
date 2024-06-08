@@ -1030,26 +1030,48 @@ app.put('/checkpointUpdate', async(req, res) => {
 /*                                 Create Game SOAR code                      */
 /* -------------------------------------------------------------------------- */
 
-app.post("/createSOARGame", async (req, res) => {
-  const authGameCreationauthWallet = web3.Keypair.fromSecretKey(bs58.decode(`${process.env.authGameCreationWalletKey}`));
+async function createSOARGame() {
+  const authGameCreationauthWallet = web3.Keypair.fromSecretKey(bs58.decode(`${process.env.authWalletKey}`));
   const soarClient = SoarProgram.getFromConnection(connection, authGameCreationauthWallet.publicKey);
   const keypair = web3.Keypair.generate();
 
-  let game = keypair;
-  let title = "Intrant Inferis (mainnet alpha)";
-  let description = "Intrant Inferis is a mobile rogue-action dungeon RPG adventure game built on Solana!";
+  let game = keypair.publicKey;
+  let title = "Intrant Inferis";
+  let description = "It is a on-chain mobile RPG";
   let genre = Genre.RPG;
   let gameType = GameType.Mobile; 
   let nftMeta = new web3.PublicKey("DpFHvFR5nJX1zouUkBtfs7YLLZE59RyniUXekm8LFPA8");
-  //let _auths = auths.map((keypair) => keypair.publicKey);
-  let _auths = [new web3.PublicKey("RANTmqxU5E3cH2ED9eSXJyRePUUPUFLjRFu3VuBDApG")];
+  let _auths = [authGameCreationauthWallet.publicKey];
 
-  // Retrieve the bundled transaction.
-  let { newGame, transaction } = await soarClient.initializeNewGame(game.publicKey, title, description, genre, gameType, nftMeta, _auths);
-  // Send and confirm the transaction with the game keypair as signer. 
-  await soarClient.sendAndConfirmTransaction(transaction, [game]);
-});
+  let { newGame, transaction } = await soarClient.initializeNewGame(game, title, description, genre, gameType, nftMeta, _auths);
+  const tx = await web3.sendAndConfirmTransaction(connection, transaction, [authGameCreationauthWallet, keypair]);
+  console.log("SOAR Create Game : " + tx);
+};
 
+async function createSOARLeaderboard() { 
+  try {
+    const authGameCreationauthWallet = web3.Keypair.fromSecretKey(bs58.decode(`${process.env.authWalletKey}`));
+    const soarClient = SoarProgram.getFromConnection(connection, authGameCreationauthWallet.publicKey);
+
+    const transactionIx = await soarClient.addNewGameLeaderBoard(
+      new web3.PublicKey("7T4rRNuZrU5ZXyLPgMa4d7t7qvgtXMRDNpikbwdQ9ndc"),
+      authGameCreationauthWallet.publicKey,
+      "Intrant Inferis All-Time Leaderboard",
+      new web3.PublicKey("DpFHvFR5nJX1zouUkBtfs7YLLZE59RyniUXekm8LFPA8"), // nft associated with the leaderboard
+      100,
+      false
+    );
+
+    const tx = await web3.sendAndConfirmTransaction(connection, transactionIx.transaction, [authGameCreationauthWallet]);
+    console.log("SOAR Leaderboard Create Game : " + tx);
+  }
+  catch (e) { 
+    console.log(e);
+  }
+}
+
+createSOARLeaderboard();
+//createSOARGame();
 
 /* -------------------------------------------------------------------------- */
 /*                                 End of Game SOAR code                      */
