@@ -1070,7 +1070,7 @@ async function createSOARLeaderboard() {
   }
 }
 
-createSOARLeaderboard();
+// createSOARLeaderboard();
 //createSOARGame();
 
 /* -------------------------------------------------------------------------- */
