@@ -3,7 +3,7 @@ The backend is currently deployed to Google Cloud App Engine
 
 ### Other links
 - [Intrant Inferis Game](https://github.com/IntoTheVerse/IntrantInferis-Game-Solana) (close sourced)
-- [Intrant Inferis Smart Contracts](https://github.com/IntoTheVerse/Intrant-Inferis-Contracts) 
+- [Intrant Inferis Smart Contracts](https://github.com/IntoTheVerse/Intrant-Inferis-Contracts) (close sourced)
 
 ## Tools and Technologies used: 
 - Unity
@@ -21,7 +21,7 @@ The backend is currently deployed to Google Cloud App Engine
 
 On-chain underworld rogue-like exploration action RPG, with collectibles, crafting, and upgrade mechanics built for mobile on Solana ⚔️
 
-# Community Alpha dropping in May 2024. 
+# Community Alpha dropping in June-July 2024. 
 - Join our discord server: [https://discord.gg/w94EVQRPRf](https://discord.gg/w94EVQRPRf)
 - Follow us on Twitter: [https://x.com/IntrantInferis](https://x.com/IntrantInferis)
 

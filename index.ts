@@ -809,7 +809,7 @@ app.post("/powerup", async (req, res) => {
     const powerups = AllBuyablePowerups[id];
     const powerUpData = {
       name: powerups.name,
-      symbol: "POWER",
+      symbol: "POWERUP",
       description: powerups.description,
       image: powerups.image,
       attributes: powerups.attributes,
@@ -865,7 +865,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
     const powerups = AllBuyablePowerups[id];
     const powerUpData = {
       name: powerups.name,
-      symbol: "POWER",
+      symbol: "POWERUP",
       description: powerups.description,
       image: powerups.image,
       attributes: powerups.attributes,
