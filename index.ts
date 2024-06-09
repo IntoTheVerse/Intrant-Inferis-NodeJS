@@ -17,7 +17,7 @@ const underdogKey = process.env.underdogkey;
 const authWalletKey = process.env.authWalletKey;
 
 //Underdog API endpoint 
-const underdogApiEndpoint = "https://devnet.underdogprotocol.com";
+const underdogApiEndpoint = "https://mainnet.underdogprotocol.com";
 const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
 
@@ -57,22 +57,22 @@ const AllBuyablePotions = [
   {
     name: "Fixer Elixir",
     description:
-      "The Fixer Elixir gives a warrior an instant return to stamina/full health",
+      "The Fixer Elixir gives a warrior an instant temporary return to stamina/full health",
     image: "https://i.postimg.cc/6qsC1bw4/revival.png",
     attributes: { color: "Blue" },
     potionId: 0,
     inferis: 20,
     required: [
       {
-        item: 41,
+        item: 2,
         value: 2,
       },
       {
-        item: 42,
+        item: 3,
         value: 2,
       },
       {
-        item: 44,
+        item: 4,
         value: 2,
       },
     ],
@@ -80,22 +80,22 @@ const AllBuyablePotions = [
   {
     name: "Quarter Revival Elixir",
     description:
-      "The Fixer Elixir gives a warrior an instant return to quarter stamina/health",
+      "The Fixer Elixir gives a warrior an instant temporary return to quarter stamina/health",
     image: "https://i.postimg.cc/nrjc6N1B/green.png",
     attributes: { color: "Green" },
     potionId: 1,
     inferis: 10,
     required: [
       {
-        item: 41,
+        item: 2,
         value: 1,
       },
       {
-        item: 42,
+        item: 3,
         value: 1,
       },
       {
-        item: 44,
+        item: 4,
         value: 1,
       },
     ],
@@ -103,22 +103,22 @@ const AllBuyablePotions = [
   {
     name: "Half Revival Elixir",
     description:
-      "The Fixer Elixir gives a warrior an instant return to half stamina/health",
+      "The Fixer Elixir gives a warrior an instant temporary return to half stamina/health",
     image: "https://i.postimg.cc/R0pWy1Br/red.png",
     attributes: { color: "Red" },
     potionId: 2,
     inferis: 15,
     required: [
       {
-        item: 41,
+        item: 2,
         value: 1,
       },
       {
-        item: 42,
+        item: 3,
         value: 2,
       },
       {
-        item: 44,
+        item: 4,
         value: 1,
       },
     ],
@@ -129,44 +129,44 @@ const AllBuyablePowerups = [
   {
     name: "Plus 15 Powerup",
     description:
-      "Boost player's STM and HP by +15 units causing an upgrade",
+      "Boost player's STM and HP by +15 units causing a permanent upgrade",
     image: "https://i.postimg.cc/Hk6D9bhf/powerup.png",
     attributes: { color: "Cyan", stm: "+15", hp: "+15"},
     powerupId: 0,
     inferis: 50,
     required: [
       {
-        item: 41,
+        item: 2,
         value: 3,
       },
       {
-        item: 42,
+        item: 3,
         value: 3,
       },
       {
-        item: 44,
+        item: 4,
         value: 3,
       },
     ],
   },
   {
     name: "Plus 20 Powerup",
-    description: "Boost player's STM and HP by +20 units causing an upgrade",
+    description: "Boost player's STM and HP by +20 units causing a permanent upgrade",
     image: "https://i.postimg.cc/X7DtZnBb/20stm.png",
     attributes: { color: "Pink", stm: "+20", hp: "+20"},
     powerupId: 1,
     inferis: 60,
     required: [
       {
-        item: 41,
+        item: 2,
         value: 4,
       },
       {
-        item: 42,
+        item: 3,
         value: 4,
       },
       {
-        item: 44,
+        item: 4,
         value: 4,
       },
     ],
@@ -185,7 +185,7 @@ const allRewardsLevels = [10_000, 8_000, 6_500, 5_000, 3_500, 2_000, 1_000, 800,
 async function burnAsset(assetcollectionId: number, assetId: any) {
   const options = {
     method: 'POST',
-    url: `https://devnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/${assetId}/burn`,
+    url: `https://mainnet.underdogprotocol.com/v2/projects/${assetcollectionId}/nfts/${assetId}/burn`,
     headers: {
       accept: 'application/json',
       authorization: `Bearer ${underdogKey}`
@@ -219,7 +219,7 @@ app.get<{ pId: number, NftId: number },{}>("/searchByNFTId/:pId&:NftId", async (
     const pId = req.params.pId;
     const getNftOptions = {
       method: "GET",
-      url: `https://devnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftId}`,
+      url: `https://mainnet.underdogprotocol.com/v2/projects/${pId}/nfts/${nftId}`,
       headers: {
         accept: "application/json",
         authorization: `Bearer ${underdogKey}`,
@@ -248,7 +248,7 @@ app.get<{ pId: number, playerAddress: string },{}>("/getCollectionByOwner/:pId&:
     const pAddress = req.params.playerAddress;
     const searchWarriorNftOptions = {
       method: "GET",
-      url: `https://devnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
+      url: `https://mainnet.underdogprotocol.com/v2/projects/${pid}/nfts/search?page=1&limit=100&search=${pAddress}`,
       headers: {
         accept: "application/json",
         authorization: `Bearer ${underdogKey}`,
@@ -370,7 +370,7 @@ app.post('/warrior', async(req, res) => {
     }
 
     const createNftResponse = await axios.post(
-        `${underdogApiEndpoint}/v2/projects/46/nfts`,
+        `${underdogApiEndpoint}/v2/projects/1/nfts`,
         nftData,
         config
     );
@@ -378,7 +378,7 @@ app.post('/warrior', async(req, res) => {
     let retrieveNFT;
     do {
         retrieveNFT = await axios.get(
-            `${underdogApiEndpoint}/v2/projects/46/nfts/${createNftResponse.data.nftId}`,
+            `${underdogApiEndpoint}/v2/projects/1/nfts/${createNftResponse.data.nftId}`,
             config
         );
         await new Promise( resolve => setTimeout(resolve, 100));
@@ -423,11 +423,11 @@ app.put('/warriorUpdate', async(req, res) => {
       }
     }
 
-    await burnAsset(45, PowerUpId)
+    await burnAsset(6, PowerUpId)
       .then(function (response) {
         const options = {
           method: "PUT",
-          url: `https://devnet.underdogprotocol.com/v2/projects/46/nfts/${NFTId}`,
+          url: `https://mainnet.underdogprotocol.com/v2/projects/1/nfts/${NFTId}`,
           headers: {
             accept: "application/json",
             "content-type": "application/json",
@@ -507,7 +507,7 @@ app.post('/theracode', async(req, res) => {
         }
 
         const createTheracodeResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/41/nfts`,
+            `${underdogApiEndpoint}/v2/projects/2/nfts`,
             theracodedata,
             config
         );
@@ -515,7 +515,7 @@ app.post('/theracode', async(req, res) => {
         let retrieveTheracode;
         do {
             retrieveTheracode = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/41/nfts/${createTheracodeResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/2/nfts/${createTheracodeResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
@@ -542,10 +542,10 @@ app.post('/theracode', async(req, res) => {
 
 
 /* -------------------------------------------------------------------------- */
-/*                                AsimanaBox                              */
+/*                                TheraBox                              */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------------ mint asimana box during collection from the game ------------------------------ */
+/* ------------------------------ mint thera box during collection from the game ------------------------------ */
 app.post('/therabox', async(req, res) => {
     try {
         const { receiver } = req.body;
@@ -569,7 +569,7 @@ app.post('/therabox', async(req, res) => {
         }
 
         const createTheraBoxResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/42/nfts`,
+            `${underdogApiEndpoint}/v2/projects/3/nfts`,
             theraboxdata,
             config
         );
@@ -577,7 +577,7 @@ app.post('/therabox', async(req, res) => {
         let retrieveTheraBox;
         do {
             retrieveTheraBox = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/42/nfts/${createTheraBoxResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/3/nfts/${createTheraBoxResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
@@ -627,7 +627,7 @@ app.post('/scroll', async(req, res) => {
         }
 
         const createScrollResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/44/nfts`,
+            `${underdogApiEndpoint}/v2/projects/4/nfts`,
             scrolldata,
             config
         );
@@ -635,7 +635,7 @@ app.post('/scroll', async(req, res) => {
         let retrieveScroll;
         do {
             retrieveScroll = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/44/nfts/${createScrollResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/4/nfts/${createScrollResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
@@ -690,7 +690,7 @@ app.post('/potion', async(req, res) => {
         }
 
         const createElixirResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/43/nfts`,
+            `${underdogApiEndpoint}/v2/projects/5/nfts`,
             elixirdata,
             config
         );
@@ -698,7 +698,7 @@ app.post('/potion', async(req, res) => {
         let retrieveElixir;
         do {
             retrieveElixir = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
+                `${underdogApiEndpoint}/v2/projects/5/nfts/${createElixirResponse.data.nftId}`,
                 config
             );
             await new Promise( resolve => setTimeout(resolve, 100));
@@ -747,7 +747,7 @@ app.post("/burnAndMintPotion", async (req, res) => {
     }
 
     const createElixirResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/43/nfts`,
+      `${underdogApiEndpoint}/v2/projects/5/nfts`,
       elixirdata,
       config
     );
@@ -755,7 +755,7 @@ app.post("/burnAndMintPotion", async (req, res) => {
     let retrieveElixir;
     do {
       retrieveElixir = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/43/nfts/${createElixirResponse.data.nftId}`,
+        `${underdogApiEndpoint}/v2/projects/5/nfts/${createElixirResponse.data.nftId}`,
         config
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -778,7 +778,7 @@ app.post("/burnAndMintPotion", async (req, res) => {
 app.post('/burnPotion', async(req, res) => {
     try {
         const { id } = req.body;
-      await burnAsset(43, id).then(function (response) {
+      await burnAsset(5, id).then(function (response) {
         res.json(response);
       })
         .catch(function (error) {
@@ -827,7 +827,7 @@ app.post("/powerup", async (req, res) => {
     }
 
     const createPowerUpResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/45/nfts`,
+      `${underdogApiEndpoint}/v2/projects/6/nfts`,
       powerUpData,
       config
     );
@@ -835,7 +835,7 @@ app.post("/powerup", async (req, res) => {
     let retrievePowerUp;
     do {
       retrievePowerUp = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/45/nfts/${createPowerUpResponse.data.nftId}`,
+        `${underdogApiEndpoint}/v2/projects/6/nfts/${createPowerUpResponse.data.nftId}`,
         config
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -883,7 +883,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
     }
 
     const createPowerUpResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/45/nfts`,
+      `${underdogApiEndpoint}/v2/projects/6/nfts`,
       powerUpData,
       config
     );
@@ -891,7 +891,7 @@ app.post("/burnAndMintPowerup", async (req, res) => {
     let retrievePowerUp;
     do {
       retrievePowerUp = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/45/nfts/${createPowerUpResponse.data.nftId}`,
+        `${underdogApiEndpoint}/v2/projects/6/nfts/${createPowerUpResponse.data.nftId}`,
         config
       );
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -952,7 +952,7 @@ app.post('/checkpoint', async(req, res) => {
       }
 
       const createCheckpointResponse = await axios.post(
-          `${underdogApiEndpoint}/v2/projects/47/nfts`,
+          `${underdogApiEndpoint}/v2/projects/7/nfts`,
           checkpointdata,
           config
       );
@@ -960,7 +960,7 @@ app.post('/checkpoint', async(req, res) => {
       let retrieveCheckpoint;
       do {
             retrieveCheckpoint = await axios.get(
-            `${underdogApiEndpoint}/v2/projects/47/nfts/${createCheckpointResponse.data.nftId}`,
+            `${underdogApiEndpoint}/v2/projects/7/nfts/${createCheckpointResponse.data.nftId}`,
             config
           );
           await new Promise( resolve => setTimeout(resolve, 100));
@@ -989,7 +989,7 @@ app.put('/checkpointUpdate', async(req, res) => {
     const { NFTId, cp_level, cp_number } = req.body
     const options = {
       method: "PUT",
-      url: `https://devnet.underdogprotocol.com/v2/projects/47/nfts/${NFTId}`,
+      url: `https://mainnet.underdogprotocol.com/v2/projects/7/nfts/${NFTId}`,
       headers: {
         accept: "application/json",
         "content-type": "application/json",
