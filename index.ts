@@ -381,7 +381,7 @@ app.post('/warrior', async(req, res) => {
           );
           console.log(retrieveNFT.data);
           await new Promise( resolve => setTimeout(resolve, 200));
-      } while(retrieveNFT.data.status !== 'pending');
+      } while(retrieveNFT.data.status === 'pending');
 
       let nftData = {
         "status" : retrieveNFT.data.status,
@@ -835,7 +835,7 @@ app.post('/powerup', async (req, res) => {
           config
         );
         await new Promise((resolve) => setTimeout(resolve, 200));
-      } while(retrieveNFT.data.status !== 'pending')
+      } while(retrieveNFT.data.status === 'pending')
 
       let nftData = {
         "status" : retrieveNFT.data.status,
