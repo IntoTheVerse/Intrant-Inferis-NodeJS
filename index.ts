@@ -917,53 +917,52 @@ const CheckpointsImages = [
 
 /* ------------------------------ mint checkpoint ------------------------------ */
 app.post('/checkpoint', async(req, res) => {
-  try {
-      const { receiver, cp_level } = req.body;
-      const checkpointdata = {
-        name: "Checkpoint 0",
-        symbol: "CP",
-        description: "You made it to checkpoint 0",
-        image: CheckpointsImages[0][0],
-        attributes: { color: CheckpointsImages[0][1], lvl: cp_level },
-        receiver: { address: receiver },
-        delegated: true,
-      };
+  const { receiver, cp_level } = req.body;
 
-      let checkpointAccountInfo = null;
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/7/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
+      name: "Checkpoint 0",
+      symbol: "CP",
+      description: "You made it to checkpoint 0",
+      image: CheckpointsImages[0][0],
+      attributes: { color: CheckpointsImages[0][1], lvl: cp_level },
+      receiver: { address: receiver },
+      delegated: true
+    }
+  };
 
-      while (!checkpointAccountInfo) {
-        checkpointAccountInfo = await connection.getAccountInfo(
-            new web3.PublicKey(process.env.checkpointCollection as string)
-          );
-          await new Promise( resolve => setTimeout(resolve, 100));
-      }
-
-      const createCheckpointResponse = await axios.post(
-          `${underdogApiEndpoint}/v2/projects/7/nfts`,
-          checkpointdata,
-          config
-      );
-      
-      let retrieveCheckpoint;
-      do {
-            retrieveCheckpoint = await axios.get(
-            `${underdogApiEndpoint}/v2/projects/7/nfts/${createCheckpointResponse.data.nftId}`,
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/7/nfts/${response.data.nftId}`,
             config
-          );
-          await new Promise( resolve => setTimeout(resolve, 100));
-      } while(retrieveCheckpoint.data.status !== 'confirmed');
+        );
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-      let checkpointData = {
-          "checkpointData" : `${(JSON.stringify(retrieveCheckpoint.data))}`,
-          "nftId" : `${createCheckpointResponse.data.nftId}`,
-      }
-
-      res.json(checkpointData);
-  } 
-  catch (err) {
-    res.status(500).send({ message: err });
-
-  }
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
+    }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 })
 
 /* ------------------------------ For searching checkpoint NFTs use above get function to fetch checkpoint (1 checkpoint per user)  ------------------------------ */
