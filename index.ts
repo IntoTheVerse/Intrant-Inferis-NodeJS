@@ -360,7 +360,7 @@ app.post('/warrior', async(req, res) => {
     },
     data: {
       name: character.name,
-      symbol: "INFERIS",
+      symbol: "WARRIOR",
       description: character.description,
       image: character.image,
       attributes: character.attributes,
