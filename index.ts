@@ -538,53 +538,52 @@ app.post('/theracode', async(req, res) => {
 
 /* ------------------------------ mint thera box during collection from the game ------------------------------ */
 app.post('/therabox', async(req, res) => {
-    try {
-        const { receiver } = req.body;
-        const theraboxdata = {
-          name: "Thera Box",
-          symbol: "THERABOX",
-          description: "Glowing mini Thera Boxes hide the artifacts. ",
-          image: "https://bafkreia4z6j6ghh2q2s7bdhbkiqitrwbivqpqdqftblni2f45xu4vousxu.ipfs.nftstorage.link/",
-          attributes: { color: "yellow" },
-          receiver: { address: receiver },
-          delegated: true,
-        };
+  const { receiver } = req.body;
 
-        let theraboxAccountInfo = null;
-
-        while (!theraboxAccountInfo) {
-            theraboxAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey(process.env.theraboxCollection as string)
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        }
-
-        const createTheraBoxResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/3/nfts`,
-            theraboxdata,
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/3/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
+      name: "Thera Box",
+      symbol: "THERABOX",
+      description: "Glowing mini boxes with hidden artifacts",
+      image: "https://bafkreia4z6j6ghh2q2s7bdhbkiqitrwbivqpqdqftblni2f45xu4vousxu.ipfs.nftstorage.link/",
+      attributes: { color: "yellow" },
+      receiver: { address: receiver },
+      delegated: true,
+    }
+  };
+        
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/3/nfts/${response.data.nftId}`,
             config
         );
-        
-        let retrieveTheraBox;
-        do {
-            retrieveTheraBox = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/3/nfts/${createTheraBoxResponse.data.nftId}`,
-                config
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        } while(retrieveTheraBox.data.status !== 'confirmed');
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-        let theraboxData = {
-            "theraboxData" : `${(JSON.stringify(retrieveTheraBox.data))}`,
-            "nftId" : `${createTheraBoxResponse.data.nftId}`,
-        }
-
-        res.json(theraboxData);
-    } 
-    catch(err) {
-      res.status(500).send({ message: err });
-
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
     }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 })
 
 
