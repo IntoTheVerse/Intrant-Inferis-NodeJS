@@ -656,54 +656,53 @@ app.post('/scroll', async(req, res) => {
 /* ------------------------------ mint potion after burning a artifact ------------------------------ */
 
 app.post('/potion', async(req, res) => {
-    try {
-        const { receiver, id } = req.body;
-        const potion = AllBuyablePotions[id];
-        const elixirdata = {
-          name: potion.name,
-          symbol: "ELIXIR",
-          description: potion.description,
-          image: potion.image,
-          attributes: potion.attributes,
-          receiver: { address: receiver },
-          delegated: true,
-        };
+  const { receiver, id } = req.body;
+  const potion = AllBuyablePotions[id];
 
-        let elixirAccountInfo = null;
-
-        while (!elixirAccountInfo) {
-            elixirAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey(process.env.potionCollection as string)
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        }
-
-        const createElixirResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/5/nfts`,
-            elixirdata,
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/5/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
+    name: potion.name,
+    symbol: "ELIXIR",
+    description: potion.description,
+    image: potion.image,
+    attributes: potion.attributes,
+    receiver: { address: receiver },
+    delegated: true,
+    }
+  };
+        
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/5/nfts/${response.data.nftId}`,
             config
         );
-        
-        let retrieveElixir;
-        do {
-            retrieveElixir = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/5/nfts/${createElixirResponse.data.nftId}`,
-                config
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        } while(retrieveElixir.data.status !== 'confirmed');
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-        let elixirData = {
-            "elixirData" : `${(JSON.stringify(retrieveElixir.data))}`,
-            "nftId" : `${createElixirResponse.data.nftId}`,
-        }
-
-        res.json(elixirData);
-    } 
-    catch(err) {
-      res.status(500).send({ message: err });
-
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
     }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 })
 
 app.post('/burnAndMintPotion', async (req, res) => {
