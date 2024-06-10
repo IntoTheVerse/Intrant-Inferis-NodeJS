@@ -706,16 +706,25 @@ app.post('/potion', async(req, res) => {
 })
 
 app.post('/burnAndMintPotion', async (req, res) => {
-  try {
-    const { receiver, id, burnItems } = req.body;
+  const { receiver, id, burnItems } = req.body;
+  const potion = AllBuyablePotions[id];
+
+  //burnItems that are being used in the gameplay
     for (let i = 0; i < burnItems.length; i++) {
       for (let j = 0; j < burnItems[i].nftIds.length; j++) {
         await burnAsset(burnItems[i].projectId, burnItems[i].nftIds[j]);
       }
     }
 
-    const potion = AllBuyablePotions[id];
-    const elixirdata = {
+    const options = {
+      method: 'POST',
+      url: `${underdogApiEndpoint}/v2/projects/5/nfts`,
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        authorization: `Bearer ${underdogKey}`
+      },
+      data: {
       name: potion.name,
       symbol: "ELIXIR",
       description: potion.description,
@@ -723,42 +732,34 @@ app.post('/burnAndMintPotion', async (req, res) => {
       attributes: potion.attributes,
       receiver: { address: receiver },
       delegated: true,
+      }
     };
 
-    let elixirAccountInfo = null;
-
-    while (!elixirAccountInfo) {
-      elixirAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey(process.env.potionCollection as string)
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-
-    const createElixirResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/5/nfts`,
-      elixirdata,
-      config
-    );
-
-    let retrieveElixir;
+    axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
     do {
-      retrieveElixir = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/5/nfts/${createElixirResponse.data.nftId}`,
-        config
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } while (retrieveElixir.data.status !== "confirmed");
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/5/nfts/${response.data.nftId}`,
+            config
+        );
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-    let elixirData = {
-      elixirData: `${JSON.stringify(retrieveElixir.data)}`,
-      nftId: `${createElixirResponse.data.nftId}`,
-    };
-
-    res.json(elixirData);
-  } catch (err) {
-      res.status(500).send({ message: err });
-
-  }
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
+    }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 });
 
 /* ------------------------------ burn potion NFT from collection upon use of potion inside the game ------------------------------ */
