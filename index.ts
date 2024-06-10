@@ -971,39 +971,32 @@ app.post('/checkpoint', async(req, res) => {
 
 /* ------------------------------ update checkpoint ------------------------------ */
 app.put('/checkpointUpdate', async(req, res) => {
-  try {
-    const { NFTId, cp_level, cp_number } = req.body
-    const options = {
-      method: "PUT",
-      url: `https://mainnet.underdogprotocol.com/v2/projects/7/nfts/${NFTId}`,
-      headers: {
-        accept: "application/json",
-        "content-type": "application/json",
-        authorization: `Bearer ${underdogKey}`,
-      },
-      data: {
-        attributes: { color: CheckpointsImages[cp_number][1], lvl: cp_level },
-        name: `Checkpoint ${cp_number}`,
-        description: `You made it to checkpoint ${cp_number}`,
-        image: CheckpointsImages[cp_number][0],
-      },
-    };
-    
-    axios
-      .request(options)
-      .then(function (response: { data: any; }) {
-        console.log(response.data);
-        res.json(response.data);
-      })
-      .catch(function (error: any) {
-        console.error(error);
-      });
-      
-  } 
-  catch (err) {
-    res.status(500).send({ message: err });
-
-  }
+  const { NFTId, cp_level, cp_number } = req.body
+  const options = {
+    method: "PUT",
+    url: `https://mainnet.underdogprotocol.com/v2/projects/7/nfts/${NFTId}`,
+    headers: {
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${underdogKey}`,
+    },
+    data: {
+      attributes: { color: CheckpointsImages[cp_number][1], lvl: cp_level },
+      name: `Checkpoint ${cp_number}`,
+      description: `You made it to checkpoint ${cp_number}`,
+      image: CheckpointsImages[cp_number][0],
+    },
+  };
+  
+  axios
+    .request(options)
+    .then(function (response: { data: any; }) {
+      console.log(response.data);
+      res.json(response.data);
+    })
+    .catch(function (error: any) {
+      console.error(error);
+    });
 })
 
 /* -------------------------------------------------------------------------- */
