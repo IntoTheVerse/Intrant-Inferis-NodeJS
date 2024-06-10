@@ -383,13 +383,13 @@ app.post('/warrior', async(req, res) => {
           await new Promise( resolve => setTimeout(resolve, 200));
       } while(retrieveNFT.data.status !== 'pending');
 
-      let warriorData = {
+      let nftData = {
         "status" : retrieveNFT.data.status,
         "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
         "nftId" : `${response.data.nftId}`,
       }
-      console.log(warriorData);
-      res.json(warriorData);
+      console.log(nftData);
+      res.json(nftData);
     })
     .catch(function (error) {
       console.error(error);
@@ -802,10 +802,18 @@ app.post('/burnPotion', async(req, res) => {
 
 /* ------------------------------ Buy Powerup ------------------------------ */
 app.post('/powerup', async (req, res) => {
-  try {
-    const { receiver, id } = req.body;
-    const powerups = AllBuyablePowerups[id];
-    const powerUpData = {
+  const { receiver, id } = req.body;
+  const powerups = AllBuyablePowerups[id];
+
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/6/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
       name: powerups.name,
       symbol: "POWERUP",
       description: powerups.description,
@@ -813,42 +821,33 @@ app.post('/powerup', async (req, res) => {
       attributes: powerups.attributes,
       receiver: { address: receiver },
       delegated: true,
-    };
-
-    let powerUpAccountInfo = null;
-
-    while (!powerUpAccountInfo) {
-      powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey(process.env.powerupColletion as string)
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
+  };
 
-    const createPowerUpResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/6/nfts`,
-      powerUpData,
-      config
-    );
+  axios
+    .request(options)
+    .then(async function (response) {
+      console.log(response.data);
+      let retrieveNFT;
+      do {
+        retrieveNFT = await axios.get(
+          `${underdogApiEndpoint}/v2/projects/6/nfts/${response.data.nftId}`,
+          config
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      } while(retrieveNFT.data.status !== 'pending')
 
-    let retrievePowerUp;
-    do {
-      retrievePowerUp = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/6/nfts/${createPowerUpResponse.data.nftId}`,
-        config
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } while (retrievePowerUp.data.status !== "confirmed");
-
-    let powerupdata = {
-      powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
-      nftId: `${createPowerUpResponse.data.nftId}`,
-    };
-
-    res.json(powerupdata);
-  } catch (err) {
-    res.status(500).send({ message: err });
-
-  }
+      let nftData = {
+        "status" : retrieveNFT.data.status,
+        "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+        "nftId" : `${response.data.nftId}`,
+      }
+      console.log(nftData);
+      res.json(nftData);
+    })
+    .catch(function (error) {
+      console.error(error);
+    });
 });
 
 app.post('/burnAndMintPowerup', async (req, res) => {
