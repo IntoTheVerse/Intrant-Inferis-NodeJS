@@ -407,60 +407,54 @@ const WarriorImages = [
 ];
 
 app.put('/warriorUpdate', async(req, res) => {
-  try {
-    const { PowerUpId, NFTId, characterName, hp, stm, lvl } = req.body;
-    let cur_lvl = parseInt(lvl);
-    for (let i = 0; i < CharacterLevelUpThreshold.length; i++) {
-      if (CharacterLevelUpThreshold[i].character === characterName) {
-        if (
-          hp >= CharacterLevelUpThreshold[i].hp_threshold[cur_lvl - 1] &&
-          stm >= CharacterLevelUpThreshold[i].stm_threshold[cur_lvl - 1]
-        ) {
-          cur_lvl++;
-        }
+  const { PowerUpId, NFTId, characterName, hp, stm, lvl } = req.body;
+  let cur_lvl = parseInt(lvl);
+  for (let i = 0; i < CharacterLevelUpThreshold.length; i++) {
+    if (CharacterLevelUpThreshold[i].character === characterName) {
+      if (
+        hp >= CharacterLevelUpThreshold[i].hp_threshold[cur_lvl - 1] &&
+        stm >= CharacterLevelUpThreshold[i].stm_threshold[cur_lvl - 1]
+      ) {
+        cur_lvl++;
       }
     }
-
-    await burnAsset(6, PowerUpId)
-      .then(function (response) {
-        const options = {
-          method: "PUT",
-          url: `https://mainnet.underdogprotocol.com/v2/projects/1/nfts/${NFTId}`,
-          headers: {
-            accept: "application/json",
-            "content-type": "application/json",
-            authorization: `Bearer ${underdogKey}`,
-          },
-          data: {
-            attributes: {
-              HP: hp,
-              STM: stm,
-              LVL: cur_lvl,
-              GLD: "Strykur",
-            },
-            name: "Tennon",
-            image: WarriorImages[cur_lvl - 1],
-          },
-        };
-
-        axios
-          .request(options)
-          .then(function (response: { data: any; }) {
-            console.log(response.data);
-            res.json(response.data);
-          })
-          .catch(function (error: any) {
-            console.error(error);
-          });
-      })
-      .catch(function (error) {
-        console.error(error);
-      });
-  } 
-  catch(err) {
-    res.status(500).send({ message: err });
-
   }
+
+  await burnAsset(6, PowerUpId)
+    .then(function (response) {
+      const options = {
+        method: "PUT",
+        url: `https://mainnet.underdogprotocol.com/v2/projects/1/nfts/${NFTId}`,
+        headers: {
+          accept: "application/json",
+          "content-type": "application/json",
+          authorization: `Bearer ${underdogKey}`,
+        },
+        data: {
+          attributes: {
+            HP: hp,
+            STM: stm,
+            LVL: cur_lvl,
+            GLD: "Strykur",
+          },
+          name: "Tennon",
+          image: WarriorImages[cur_lvl - 1],
+        },
+      };
+
+      axios
+        .request(options)
+        .then(function (response: { data: any; }) {
+          console.log(response.data);
+          res.json(response.data);
+        })
+        .catch(function (error: any) {
+          console.error(error);
+        });
+    })
+    .catch(function (error) {
+      console.error(error);
+  });
 })
 
 /* -------------------------------------------------------------------------- */
@@ -483,53 +477,52 @@ app.put('/warriorUpdate', async(req, res) => {
 /* ------------------------------ mint theracode during collection from the game ------------------------------ */
 
 app.post('/theracode', async(req, res) => {
-    try {
-        const { receiver } = req.body;
-        const theracodedata = {
-          name: "Theracode",
-          symbol: "THERACODE",
-          description: "Floating Theracode that reveals binary numbers.",
-          image: "https://bafkreicli7hzoarg4a22ebuu2spjajx6c6f4m7wzoegzhebrn2kw2ur5oa.ipfs.nftstorage.link/",
-          attributes: { color: "blue" },
-          receiver: { address: receiver },
-          delegated: true,
-        };
+  const { receiver } = req.body;
 
-        let theracodeAccountInfo = null;
-
-        while (!theracodeAccountInfo) {
-            theracodeAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey(process.env.theracodeCollection as string)
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        }
-
-        const createTheracodeResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/2/nfts`,
-            theracodedata,
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/2/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
+    name: "Theracode",
+    symbol: "THERACODE",
+    description: "Mystical book that reveals binaries",
+    image: "https://bafkreicli7hzoarg4a22ebuu2spjajx6c6f4m7wzoegzhebrn2kw2ur5oa.ipfs.nftstorage.link/",
+    attributes: { color: "blue" },
+    receiver: { address: receiver },
+    delegated: true,
+    }
+  };
+        
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/2/nfts/${response.data.nftId}`,
             config
         );
-        
-        let retrieveTheracode;
-        do {
-            retrieveTheracode = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/2/nfts/${createTheracodeResponse.data.nftId}`,
-                config
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        } while(retrieveTheracode.data.status !== 'confirmed');
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-        let theracodeData = {
-            "theracodeData" : `${(JSON.stringify(retrieveTheracode.data))}`,
-            "nftId" : `${createTheracodeResponse.data.nftId}`,
-        }
-
-        res.json(theracodeData);
-    } 
-    catch (err) {
-      res.status(500).send({ message: err });
-
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
     }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 })
 
 /* ------------------------------ burn Theracode NFT from collection upon use to make potions or powerups ------------------------------ */
