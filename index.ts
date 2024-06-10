@@ -46,7 +46,7 @@ const AllBuyableWarriors = [
     {
       name: "Tennon",
       description: "The mighty Tennon",
-      image: "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
+      image: "https://bafybeidxbix7k7qc76ufrzcoktlixahyvdbycyu2zudgz7e3faspdxqvvi.ipfs.nftstorage.link/",
       attributes: { HP: "190", STM: "190", LVL: "1", GLD: "Strykur" },
       inferis: 20,
       characterId : 0
@@ -58,8 +58,8 @@ const AllBuyablePotions = [
     name: "Fixer Elixir",
     description:
       "The Fixer Elixir gives a warrior an instant temporary return to stamina/full health",
-    image: "https://i.postimg.cc/6qsC1bw4/revival.png",
-    attributes: { color: "Blue" },
+    image: "https://bafkreietd6olqr2ci2dc7si4vy6hf6pv7hyxsiq46rk32xpkuzzbbrwy7e.ipfs.nftstorage.link/",
+    attributes: { color: "Purple" },
     potionId: 0,
     inferis: 20,
     required: [
@@ -81,7 +81,7 @@ const AllBuyablePotions = [
     name: "Quarter Revival Elixir",
     description:
       "The Fixer Elixir gives a warrior an instant temporary return to quarter stamina/health",
-    image: "https://i.postimg.cc/nrjc6N1B/green.png",
+    image: "https://bafkreidvep3viw3nqqkqb5k2o2ywzkau2boyslujr63pj5gcbap6s37jeq.ipfs.nftstorage.link/",
     attributes: { color: "Green" },
     potionId: 1,
     inferis: 10,
@@ -104,7 +104,7 @@ const AllBuyablePotions = [
     name: "Half Revival Elixir",
     description:
       "The Fixer Elixir gives a warrior an instant temporary return to half stamina/health",
-    image: "https://i.postimg.cc/R0pWy1Br/red.png",
+    image: "https://bafkreideyeu5onx4oq5b2o4vzf7wuuk3ugfqynblqdyk4haf4q4uqxlw74.ipfs.nftstorage.link/",
     attributes: { color: "Red" },
     potionId: 2,
     inferis: 15,
@@ -130,7 +130,7 @@ const AllBuyablePowerups = [
     name: "Plus 15 Powerup",
     description:
       "Boost player's STM and HP by +15 units causing a permanent upgrade",
-    image: "https://i.postimg.cc/Hk6D9bhf/powerup.png",
+    image: "https://bafkreicp7qmmf2c5iyftsxhzf34vz3qllbr3k3xdwgxvsbnlbgokm5i3gy.ipfs.nftstorage.link/",
     attributes: { color: "Cyan", stm: "+15", hp: "+15"},
     powerupId: 0,
     inferis: 50,
@@ -152,7 +152,7 @@ const AllBuyablePowerups = [
   {
     name: "Plus 20 Powerup",
     description: "Boost player's STM and HP by +20 units causing a permanent upgrade",
-    image: "https://i.postimg.cc/X7DtZnBb/20stm.png",
+    image: "https://bafkreihytm5tseo52ff3xzhcggbzfhzvns5wfteppubufzfltuov5pnv3q.ipfs.nftstorage.link/",
     attributes: { color: "Pink", stm: "+20", hp: "+20"},
     powerupId: 1,
     inferis: 60,
@@ -278,7 +278,7 @@ app.get<{ pId: number, playerAddress: string },{}>("/getCollectionByOwner/:pId&:
 /*                                Get All Default Code                        */
 /* -------------------------------------------------------------------------- */
 
-app.get("/getAllBuyableWarriors", async (req, res) => { 
+app.get('/getAllBuyableWarriors', async (req, res) => { 
     try {
         res.json(AllBuyableWarriors);
     } catch(err) {
@@ -286,7 +286,7 @@ app.get("/getAllBuyableWarriors", async (req, res) => {
     }
 });
 
-app.get("/getAllBuyablePotions", async (req, res) => {
+app.get('/getAllBuyablePotions', async (req, res) => {
   try {
     res.json(AllBuyablePotions);
   } catch (err) {
@@ -294,7 +294,7 @@ app.get("/getAllBuyablePotions", async (req, res) => {
   }
 });
 
-app.get("/getAllBuyablePowerups", async (req, res) => {
+app.get('/getAllBuyablePowerups', async (req, res) => {
   try {
     res.json(AllBuyablePowerups);
   } catch (err) {
@@ -302,7 +302,7 @@ app.get("/getAllBuyablePowerups", async (req, res) => {
   }
 });
 
-app.get("/getAllXpLevels", async (req, res) => {
+app.get('/getAllXpLevels', async (req, res) => {
   try {
     res.json(allXpLevels);
   } catch (err) {
@@ -310,7 +310,7 @@ app.get("/getAllXpLevels", async (req, res) => {
   }
 });
 
-app.get("/getAllUsersWithRewards", async (req, res) => {
+app.get('/getAllUsersWithRewards', async (req, res) => {
   try {
     res.json(await createCollectionIfEmpty("Weekly Leaderboard", "Bonk"));
   } catch (err) {
@@ -399,11 +399,11 @@ app.post('/warrior', async(req, res) => {
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
 
 const WarriorImages = [
-  "https://i.postimg.cc/hvHD4Z9c/ITVStrykur-MWarrior.png",
-  "https://i.postimg.cc/0QVS25CM/level2.png",
-  "https://i.postimg.cc/v817H9pG/lvl3.png",
-  "https://i.postimg.cc/d0trMT2P/lvl4.png",
-  "https://i.postimg.cc/L8vgV6ry/lvl5.png",
+  "https://bafybeidxbix7k7qc76ufrzcoktlixahyvdbycyu2zudgz7e3faspdxqvvi.ipfs.nftstorage.link/",
+  "https://bafkreieyuw62lfsknfnk5lvsbmikzmmobuzpy2j3i4l54637og4aej6uma.ipfs.nftstorage.link/",
+  "https://bafkreidrxl5tcydhmwonds7gaaf5qv7p4zrjhwxzpqlqtco24l76mm5i64.ipfs.nftstorage.link/",
+  "https://bafkreibhz56t5xmtywolroqjvhybsl5ehartjkcqz6praogsfe5wzwnbra.ipfs.nftstorage.link/",
+  "https://bafkreicf4424ooewqt225rhqawi72ymgwafhiqe5n43xoo4oe5odpnr5la.ipfs.nftstorage.link/",
 ];
 
 app.put('/warriorUpdate', async(req, res) => {
@@ -489,7 +489,7 @@ app.post('/theracode', async(req, res) => {
           name: "Theracode",
           symbol: "THERACODE",
           description: "Floating Theracode that reveals binary numbers.",
-          image: "https://i.postimg.cc/XqYF9nY7/theracode01.png",
+          image: "https://bafkreicli7hzoarg4a22ebuu2spjajx6c6f4m7wzoegzhebrn2kw2ur5oa.ipfs.nftstorage.link/",
           attributes: { color: "blue" },
           receiver: { address: receiver },
           delegated: true,
@@ -551,7 +551,7 @@ app.post('/therabox', async(req, res) => {
           name: "Thera Box",
           symbol: "THERABOX",
           description: "Glowing mini Thera Boxes hide the artifacts. ",
-          image: "https://i.postimg.cc/Vv0PN1fT/therabox.png",
+          image: "https://bafkreia4z6j6ghh2q2s7bdhbkiqitrwbivqpqdqftblni2f45xu4vousxu.ipfs.nftstorage.link/",
           attributes: { color: "yellow" },
           receiver: { address: receiver },
           delegated: true,
@@ -609,7 +609,7 @@ app.post('/scroll', async(req, res) => {
           symbol: "SCROLL",
           description:
             "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
-          image: "https://i.postimg.cc/tTfzGtQW/Union.png",
+          image: "https://bafkreicbengkiedvzbgrtfjbxzwd4udnnbkctqfl5m3hs5a56fdzie7iiu.ipfs.nftstorage.link/",
           attributes: { color: "white" },
           receiver: { address: receiver },
           delegated: true,
@@ -715,7 +715,7 @@ app.post('/potion', async(req, res) => {
     }
 })
 
-app.post("/burnAndMintPotion", async (req, res) => {
+app.post('/burnAndMintPotion', async (req, res) => {
   try {
     const { receiver, id, burnItems } = req.body;
     for (let i = 0; i < burnItems.length; i++) {
@@ -801,7 +801,7 @@ app.post('/burnPotion', async(req, res) => {
 /* -------------------------------------------------------------------------- */
 
 /* ------------------------------ Buy Powerup ------------------------------ */
-app.post("/powerup", async (req, res) => {
+app.post('/powerup', async (req, res) => {
   try {
     const { receiver, id } = req.body;
     const powerups = AllBuyablePowerups[id];
@@ -851,7 +851,7 @@ app.post("/powerup", async (req, res) => {
   }
 });
 
-app.post("/burnAndMintPowerup", async (req, res) => {
+app.post('/burnAndMintPowerup', async (req, res) => {
   try {
     const { receiver, id, burnItems } = req.body;
     for (let i = 0; i < burnItems.length; i++) {
@@ -918,12 +918,12 @@ app.post("/burnAndMintPowerup", async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 const CheckpointsImages = [
-  ["https://i.postimg.cc/t4zR3nQf/cp0.png", "Green"],
-  ["https://i.postimg.cc/htFsr6gJ/cp1.png", "Black"],
-  ["https://i.postimg.cc/85CmcVdY/cp2.png", "Red"],
-  ["https://i.postimg.cc/j5kQJkZS/cp3.png", "Cyan"],
-  ["https://i.postimg.cc/gjXyyqTq/cp4.png", "Yellow"],
-  ["https://i.postimg.cc/J0fNpHww/cp5.png", "Purple"],
+  ["https://bafkreidpquoaw7wxahs2q6dbsrjdxmmggt3pywnn57kojc7hu7xummy2my.ipfs.nftstorage.link/", "Green"],
+  ["https://bafkreibimypit2lm3ag6m2aji7jnslbwcwtkh6icotwd7ra5e26wdd2dz4.ipfs.nftstorage.link/", "Black"],
+  ["https://bafkreidy5ak5ae4b4l3lk5e53injc2idv4g24u4r47jlkrvh2jdqq7s2wq.ipfs.nftstorage.link/", "Red"],
+  ["https://bafkreibovxyvccrj3wi2x6aw7y6b5tpxef3nnbnwymf7zliwtmmkynojz4.ipfs.nftstorage.link/", "Cyan"],
+  ["https://bafkreifsquko5gi2hdmhhvh266k2cfqqfulnlco6i55i7ihi7lawzjuse4.ipfs.nftstorage.link/", "Yellow"],
+  ["https://bafkreibcaau6wtlkor3qtaj2ah2vpghhiefnbvu5p7krcbfq6s3wtlqrv4.ipfs.nftstorage.link/", "Purple"],
 ];
 
 /* ------------------------------ mint checkpoint ------------------------------ */
@@ -1080,7 +1080,7 @@ async function createSOARLeaderboard() {
 /*                                 Update score using SOAR code               */
 /* -------------------------------------------------------------------------- */
 
-app.post("/addSOARScore", async (req, res) => {
+app.post('/addSOARScore', async (req, res) => {
   try {
     const { scoreAllTime, scoreWeekly, playerPublicKey } = req.body;
 
@@ -1116,7 +1116,7 @@ app.post("/addSOARScore", async (req, res) => {
   }
 });
 
-app.post("/claimWeeklyReward", async (req, res) => {
+app.post('/claimWeeklyReward', async (req, res) => {
   try {
     const { playerPublicKey, index } = req.body;
 
