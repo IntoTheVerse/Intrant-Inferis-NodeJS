@@ -594,54 +594,53 @@ app.post('/therabox', async(req, res) => {
 /* ------------------------------ mint magical scroll during collection from the game ------------------------------ */
 
 app.post('/scroll', async(req, res) => {
-    try {
-        const { receiver } = req.body;
-        const scrolldata = {
-          name: "Magical Scroll",
+  const { receiver } = req.body;
+
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/4/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
+      name: "Magical Scroll",
           symbol: "SCROLL",
           description:
-            "A partially open magical scroll that contains ancient writing and binary circles and symbols.",
+            "A partially open magical scroll that contains ancient writing and binaries",
           image: "https://bafkreicbengkiedvzbgrtfjbxzwd4udnnbkctqfl5m3hs5a56fdzie7iiu.ipfs.nftstorage.link/",
           attributes: { color: "white" },
           receiver: { address: receiver },
           delegated: true,
-        };
-
-        let scrollAccountInfo = null;
-
-        while (!scrollAccountInfo) {
-            scrollAccountInfo = await connection.getAccountInfo(
-              new web3.PublicKey(process.env.scrollColletion as string)
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        }
-
-        const createScrollResponse = await axios.post(
-            `${underdogApiEndpoint}/v2/projects/4/nfts`,
-            scrolldata,
+    }
+  };
+        
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
+    do {
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/4/nfts/${response.data.nftId}`,
             config
         );
-        
-        let retrieveScroll;
-        do {
-            retrieveScroll = await axios.get(
-                `${underdogApiEndpoint}/v2/projects/4/nfts/${createScrollResponse.data.nftId}`,
-                config
-            );
-            await new Promise( resolve => setTimeout(resolve, 100));
-        } while(retrieveScroll.data.status !== 'confirmed');
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 500));
+    } while(retrieveNFT.data.status === 'pending');
 
-        let scrollData = {
-            "scrollData" : `${(JSON.stringify(retrieveScroll.data))}`,
-            "nftId" : `${createScrollResponse.data.nftId}`,
-        }
-
-        res.json(scrollData);
-    } 
-    catch(err) {
-      res.status(500).send({ message: err });
-
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
     }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 })
 
 /* -------------------------------------------------------------------------- */
