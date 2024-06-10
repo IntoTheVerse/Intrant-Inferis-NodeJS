@@ -840,16 +840,25 @@ app.post('/powerup', async (req, res) => {
 });
 
 app.post('/burnAndMintPowerup', async (req, res) => {
-  try {
-    const { receiver, id, burnItems } = req.body;
-    for (let i = 0; i < burnItems.length; i++) {
-      for (let j = 0; j < burnItems[i].nftIds.length; j++) {
-        await burnAsset(burnItems[i].projectId, burnItems[i].nftIds[j]);
-      }
+  const { receiver, id, burnItems } = req.body;
+  const powerups = AllBuyablePowerups[id];
+
+  //burn powerups that are being used in the gameplay
+  for (let i = 0; i < burnItems.length; i++) {
+    for (let j = 0; j < burnItems[i].nftIds.length; j++) {
+      await burnAsset(burnItems[i].projectId, burnItems[i].nftIds[j]);
     }
-    
-    const powerups = AllBuyablePowerups[id];
-    const powerUpData = {
+  }
+
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/6/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
       name: powerups.name,
       symbol: "POWERUP",
       description: powerups.description,
@@ -857,42 +866,34 @@ app.post('/burnAndMintPowerup', async (req, res) => {
       attributes: powerups.attributes,
       receiver: { address: receiver },
       delegated: true,
-    };
-
-    let powerUpAccountInfo = null;
-
-    while (!powerUpAccountInfo) {
-      powerUpAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey(process.env.powerupColletion as string)
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
     }
+  };
 
-    const createPowerUpResponse = await axios.post(
-      `${underdogApiEndpoint}/v2/projects/6/nfts`,
-      powerUpData,
-      config
-    );
-
-    let retrievePowerUp;
+  axios
+  .request(options)
+  .then(async function (response) {
+    console.log(response.data);
+    let retrieveNFT;
     do {
-      retrievePowerUp = await axios.get(
-        `${underdogApiEndpoint}/v2/projects/6/nfts/${createPowerUpResponse.data.nftId}`,
-        config
-      );
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    } while (retrievePowerUp.data.status !== "confirmed");
+        retrieveNFT = await axios.get(
+            `${underdogApiEndpoint}/v2/projects/6/nfts/${response.data.nftId}`,
+            config
+        );
+        console.log(retrieveNFT.data);
+        await new Promise( resolve => setTimeout(resolve, 200));
+    } while(retrieveNFT.data.status === 'pending');
 
-    let powerupdata = {
-      powerupdata: `${JSON.stringify(retrievePowerUp.data)}`,
-      nftId: `${createPowerUpResponse.data.nftId}`,
-    };
-
-    res.json(powerupdata);
-  } catch (err) {
-    res.status(500).send({ message: err });
-
-  }
+    let nftData = {
+      "status" : retrieveNFT.data.status,
+      "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
+      "nftId" : `${response.data.nftId}`,
+    }
+    console.log(nftData);
+    res.json(nftData);
+  })
+  .catch(function (error) {
+    console.error(error);
+  });
 });
 
 /* -------------------------------------------------------------------------- */
