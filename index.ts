@@ -381,7 +381,7 @@ app.post('/warrior', async(req, res) => {
               config
           );
           console.log(retrieveNFT.data);
-          await new Promise( resolve => setTimeout(resolve, 200));
+          await new Promise( resolve => setTimeout(resolve, 500));
       } while(retrieveNFT.data.status === 'pending');
 
       let nftData = {
@@ -510,7 +510,7 @@ app.post('/theracode', async(req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
@@ -571,7 +571,7 @@ app.post('/therabox', async(req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
@@ -690,7 +690,7 @@ app.post('/potion', async(req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
@@ -747,7 +747,7 @@ app.post('/burnAndMintPotion', async (req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
@@ -766,15 +766,34 @@ app.post('/burnAndMintPotion', async (req, res) => {
 /* ------------------------------ burn potion NFT from collection upon use of potion inside the game ------------------------------ */
 
 app.post('/burnPotion', async(req, res) => {
-    try {
-      const { id } = req.body;
-      let respo = await burnAsset(5, id)
-      console.log(respo);
-      res.json(respo);
-    } 
-    catch (err) {
-      res.status(500).send({ message: err });
+  const { id } = req.body;
+
+  const options = {
+    method: 'POST',
+    url: `https://mainnet.underdogprotocol.com/v2/projects/5/nfts/${id}/burn`,
+    headers: {
+      accept: 'application/json',
+      authorization: `Bearer ${underdogKey}`
     }
+  };
+  
+  axios
+    .request(options)
+    .then(function (response) {
+      console.log(response.data);
+      
+      let nftData = {
+        "transactionId" : `${response.data.transactionId}`,
+        "mintAddress" : `${response.data.transactionId}`,
+        "projectId" : `${response.data.projectId}`,
+        "nftId" : `${response.data.nftId}`
+      }
+      res.json(nftData);
+    })
+    .catch(function (error) {
+      console.error(error);
+    });
+    
 })
 
 
@@ -823,7 +842,7 @@ app.post('/powerup', async (req, res) => {
           `${underdogApiEndpoint}/v2/projects/6/nfts/${response.data.nftId}`,
           config
         );
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       } while(retrieveNFT.data.status === 'pending')
 
       let nftData = {
@@ -880,7 +899,7 @@ app.post('/burnAndMintPowerup', async (req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
@@ -949,7 +968,7 @@ app.post('/checkpoint', async(req, res) => {
             config
         );
         console.log(retrieveNFT.data);
-        await new Promise( resolve => setTimeout(resolve, 200));
+        await new Promise( resolve => setTimeout(resolve, 500));
     } while(retrieveNFT.data.status === 'pending');
 
     let nftData = {
