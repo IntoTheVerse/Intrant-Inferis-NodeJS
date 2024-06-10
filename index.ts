@@ -18,7 +18,7 @@ const authWalletKey = process.env.authWalletKey;
 
 //Underdog API endpoint 
 const underdogApiEndpoint = "https://mainnet.underdogprotocol.com";
-const heliusUrl = `https://devnet.helius-rpc.com/?api-key=${apiKey}`;
+const heliusUrl = `https://solana-mainnet.api.syndica.io/api-token/${apiKey}`;
 const connection = new web3.Connection(heliusUrl);
 
 //Soar
@@ -329,6 +329,7 @@ async function createCollectionIfEmpty(collectionName: string, tokenName: string
       _id: new mongoose.Types.ObjectId(),
       eventName: collectionName,
       tokenName: tokenName,
+      totalPrizePool: 1000000,
       leaderboardAddress: leaderboardKeyWeekly,
       data: []
     });
@@ -345,11 +346,19 @@ async function createCollectionIfEmpty(collectionName: string, tokenName: string
 /* ------------------------------ Mint Warrior ------------------------------ */
 
 app.post('/warrior', async(req, res) => {
-  try {
-    const { receiver, id } = req.body;
-    const character = AllBuyableWarriors[id];
 
-    const nftData = {
+  const { receiver, id } = req.body;
+  const character = AllBuyableWarriors[id];
+
+  const options = {
+    method: 'POST',
+    url: `${underdogApiEndpoint}/v2/projects/1/nfts`,
+    headers: {
+      accept: 'application/json',
+      'content-type': 'application/json',
+      authorization: `Bearer ${underdogKey}`
+    },
+    data: {
       name: character.name,
       symbol: "INFERIS",
       description: character.description,
@@ -357,45 +366,34 @@ app.post('/warrior', async(req, res) => {
       attributes: character.attributes,
       receiver: { address: receiver },
       delegated: true,
-    };
-
-    
-    let projectAccountInfo = null;
-
-    while (!projectAccountInfo) {
-      projectAccountInfo = await connection.getAccountInfo(
-        new web3.PublicKey(process.env.warriorCollection as string)
-      );
-      await new Promise( resolve => setTimeout(resolve, 100));
     }
+  };
+  
+  axios
+    .request(options)
+    .then(async function (response) {
+      console.log(response.data);
+      let retrieveNFT;
+      do {
+          retrieveNFT = await axios.get(
+              `${underdogApiEndpoint}/v2/projects/1/nfts/${response.data.nftId}`,
+              config
+          );
+          console.log(retrieveNFT.data);
+          await new Promise( resolve => setTimeout(resolve, 200));
+      } while(retrieveNFT.data.status !== 'pending');
 
-    const createNftResponse = await axios.post(
-        `${underdogApiEndpoint}/v2/projects/1/nfts`,
-        nftData,
-        config
-    );
-    
-    let retrieveNFT;
-    do {
-        retrieveNFT = await axios.get(
-            `${underdogApiEndpoint}/v2/projects/1/nfts/${createNftResponse.data.nftId}`,
-            config
-        );
-        await new Promise( resolve => setTimeout(resolve, 100));
-    } while(retrieveNFT.data.status !== 'confirmed');
-
-    let warriorData = {
+      let warriorData = {
+        "status" : retrieveNFT.data.status,
         "nftData" : `${(JSON.stringify(retrieveNFT.data))}`,
-        "nftId" : `${createNftResponse.data.nftId}`,
-    }
-    console.log(warriorData);
-
-
-    res.json(warriorData);
-  } 
-  catch (err) {
-    res.status(500).send({ message: err });
-  }
+        "nftId" : `${response.data.nftId}`,
+      }
+      console.log(warriorData);
+      res.json(warriorData);
+    })
+    .catch(function (error) {
+      console.error(error);
+    });
 })
 
 /* ------------------------------ update warrior upon administering powerups inside the game ------------------------------ */
