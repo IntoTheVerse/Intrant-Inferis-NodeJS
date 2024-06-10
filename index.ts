@@ -715,7 +715,7 @@ app.post('/potion', async(req, res) => {
     }
 })
 
-app.post("/burnAndMintPotion", async (req, res) => {
+app.post('/burnAndMintPotion', async (req, res) => {
   try {
     const { receiver, id, burnItems } = req.body;
     for (let i = 0; i < burnItems.length; i++) {
