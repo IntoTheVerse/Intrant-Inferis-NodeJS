@@ -196,6 +196,7 @@ async function burnAsset(assetcollectionId: number, assetId: any) {
     .request(options)
     .then(function (response: { data: any; }) {
       console.log(response.data);
+      return(response.data);
     })
     .catch(function (error: any) {
       console.error(error);
@@ -766,13 +767,10 @@ app.post('/burnAndMintPotion', async (req, res) => {
 
 app.post('/burnPotion', async(req, res) => {
     try {
-        const { id } = req.body;
-      await burnAsset(5, id).then(function (response) {
-        res.json(response);
-      })
-        .catch(function (error) {
-          console.error(error);
-        });
+      const { id } = req.body;
+      let respo = await burnAsset(5, id)
+      console.log(respo);
+      res.json(respo);
     } 
     catch (err) {
       res.status(500).send({ message: err });
