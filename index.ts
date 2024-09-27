@@ -8,6 +8,13 @@ const port = process.env.PORT || 8080;
 import axios from 'axios';
 app.use(express.json());
 
+// Check the environment and load the appropriate .env file
+if (process.env.NODE_ENV === 'production') {
+  dotenv.config({ path: '.env' });
+} else {
+  dotenv.config({ path: '.env.development' });
+}
+
 //Solana
 import web3 = require("@solana/web3.js");
 import BN = require("bn.js");
