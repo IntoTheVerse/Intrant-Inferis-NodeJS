@@ -1,11 +1,17 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
-const cron = require("node-cron"); 
+import axios from 'axios';
+import { auth, firestore } from './firebaseConfig';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import gameshift from '@api/gameshift';
+const cron = require("node-cron");
+
 
 dotenv.config();
 const app: express.Application = express();
 const port = process.env.PORT || 8080;
-import axios from 'axios';
+
 app.use(express.json());
 
 // Check the environment and load the appropriate .env file
@@ -346,6 +352,146 @@ async function createCollectionIfEmpty(collectionName: string, tokenName: string
   }
   return mongoLeaderboard;
 }
+
+/* -------------------------------------------------------------------------- */
+/*                      Register New User Code                                */
+
+/* 
+
+Firestore (Root)
+└── users (Collection)
+    ├── userId1 (Document)   <-- Firebase UID and referenceId from GameShift
+    │   ├── email: "user1@example.com"
+    │   ├── referenceId: "userId1"  <-- Same as the document ID (userId)
+    │   ├── walletAddress: "E1B7CmYQtWZUdJqtERcszT2ovPESM5A2aWpbrCXYob1q"
+    │   ├── walletProvider: "GameShift"
+    ├── userId2 (Document)
+    │   ├── email: "user2@example.com"
+    │   ├── referenceId: "userId2"
+    │   ├── walletAddress: "A5D8CmYQtWZUdJqtERcszT2ovPESM5A2aWpbrCXYob3c"
+    │   ├── walletProvider: "GameShift"
+    └── ... (Other user documents)
+
+*/
+
+/* -------------------------------------------------------------------------- */
+
+/* ----------------- Register User with Gameshift --------------------------- */
+
+app.post('/registerUser', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Create user in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const userId = userCredential.user.uid; // Firebase UID and will be used as document ID
+
+    // Register user with GameShift using Firebase UID as the referenceId
+    const gameShiftResponse = await gameshift.projectUserController_create({
+      referenceId: userId,  // Using Firebase UID as referenceId
+      email: email,
+    }, {
+      'x-api-key': process.env.GAMESHIFT_API_KEY
+    });
+
+    // Store user details in Firestore, using userId (Firebase UID) as the document ID
+    const userDoc = doc(firestore, 'users', userId);
+    await setDoc(userDoc, {
+      email,  // Store only the email and referenceId (which is the same as userId)
+      referenceId: gameShiftResponse.data.referenceId,
+    });
+
+    // Get the wallet address from GameShift using the referenceId
+    const walletResponse = await gameshift.projectUserController_getWalletAddress({
+      referenceId: gameShiftResponse.data.referenceId,  // userId is same as referenceId
+      'x-api-key': process.env.GAMESHIFT_API_KEY
+    });
+
+    // Update the Firestore document with wallet address and provider
+    await updateDoc(userDoc, {
+      walletAddress: walletResponse.data.address,
+      walletProvider: walletResponse.data.walletProvider,
+    });
+
+    res.status(200).json({
+      message: 'User registered successfully',
+      gameShiftData: gameShiftResponse.data,
+      walletData: walletResponse.data,
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: 'User registration failed', error });
+  }
+});
+
+
+/* ----------------- Reset Password with Firebase Auth --------------------------- */
+
+app.post('/resetPassword', async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    // Send password reset email using Firebase Auth
+    await sendPasswordResetEmail(auth, email);
+
+    res.status(200).json({
+      message: 'Password reset email sent successfully!',
+    });
+
+  } catch (error) {
+    // Handle the unknown error properly by checking its type
+    if (error instanceof Error) {
+      console.error(error.message);
+      res.status(500).send({
+        message: 'Failed to send password reset email.',
+        error: error.message,
+      });
+    } else {
+      console.error("Unexpected error", error);
+      res.status(500).send({
+        message: 'An unexpected error occurred.',
+        error: String(error),
+      });
+    }
+  }
+});
+
+/* ----------------- Change/Update Password with Firebase Auth --------------------------- */
+
+
+app.post('/changePassword', async (req, res) => {
+  const { newPassword } = req.body;
+
+  try {
+    const user = auth.currentUser; // Get the currently logged-in user
+
+    if (user) {
+      await updatePassword(user, newPassword); // Update password
+      res.status(200).json({
+        message: 'Password updated successfully!',
+      });
+    } else {
+      res.status(400).json({
+        message: 'No user is logged in.',
+      });
+    }
+    
+  } catch (error) {
+    console.error("Unexpected error", error);
+      res.status(500).send({
+        message: 'Failed to update password.',
+        error: String(error),
+      });
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/*               End of Register User with Gameshift Code                     */
+/* -------------------------------------------------------------------------- */
+
+
+
 
 /* -------------------------------------------------------------------------- */
 /*                                Warrior Code                                */
