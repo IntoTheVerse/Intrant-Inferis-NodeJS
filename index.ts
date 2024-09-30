@@ -4,7 +4,6 @@ import axios from 'axios';
 import { auth, firestore } from './firebaseConfig';
 import { createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import gameshift from '@api/gameshift';
 const cron = require("node-cron");
 
 
@@ -384,15 +383,23 @@ app.post('/registerUser', async (req, res) => {
   try {
     // Create user in Firebase Auth
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const userId = userCredential.user.uid; // Firebase UID and will be used as document ID
+    const userId = userCredential.user.uid; // Firebase UID will be used as document ID
 
     // Register user with GameShift using Firebase UID as the referenceId
-    const gameShiftResponse = await gameshift.projectUserController_create({
-      referenceId: userId,  // Using Firebase UID as referenceId
-      email: email,
-    }, {
-      'x-api-key': process.env.GAMESHIFT_API_KEY
-    });
+    const gameShiftResponse = await axios.post(
+      'https://api.gameshift.dev/nx/users',
+      {
+        referenceId: userId,  // Using Firebase UID as referenceId
+        email: email,
+      },
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+          'content-type': 'application/json',
+        },
+      }
+    );
 
     // Store user details in Firestore, using userId (Firebase UID) as the document ID
     const userDoc = doc(firestore, 'users', userId);
@@ -402,10 +409,15 @@ app.post('/registerUser', async (req, res) => {
     });
 
     // Get the wallet address from GameShift using the referenceId
-    const walletResponse = await gameshift.projectUserController_getWalletAddress({
-      referenceId: gameShiftResponse.data.referenceId,  // userId is same as referenceId
-      'x-api-key': process.env.GAMESHIFT_API_KEY
-    });
+    const walletResponse = await axios.get(
+      `https://api.gameshift.dev/nx/users/${gameShiftResponse.data.referenceId}/wallet`,
+      {
+        headers: {
+          'accept': 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      }
+    );
 
     // Update the Firestore document with wallet address and provider
     await updateDoc(userDoc, {
@@ -420,10 +432,20 @@ app.post('/registerUser', async (req, res) => {
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).send({ message: 'User registration failed', error });
+    // Error handling for unknown type
+    if (error instanceof Error) {
+      // This handles normal JavaScript Error objects
+      console.error(error.message);
+      res.status(500).send({ message: 'User registration failed', error: error.message });
+    } else {
+      // This handles any non-standard error object (e.g., strings, other objects)
+      console.error("Unexpected error:", error);
+      res.status(500).send({ message: 'An unexpected error occurred', error: String(error) });
+    }
   }
 });
+
+
 
 
 /* ----------------- Reset Password with Firebase Auth --------------------------- */

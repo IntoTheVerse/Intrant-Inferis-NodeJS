@@ -6,8 +6,8 @@
   "scripts": {
     "build": "rimraf dist && npx tsc",
     "prestart": "npm run build",
-    "start": "NODE_ENV=production node dist/index.js",         
-    "dev": "NODE_ENV=development concurrently \"npx tsc -w\" \"nodemon dist/index.js\"", 
+    "start": "NODE_ENV=production node dist/index.js",
+    "dev": "NODE_ENV=development concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
     "preserve": "npm run build",
     "serve": "concurrently \"npx tsc -w\"  \"nodemon dist/index.js\""
   },
@@ -38,6 +38,7 @@
     "firebase-admin": "^12.5.0",
     "mongoose": "^8.4.0",
     "node-cron": "^3.0.3",
+    "node-fetch": "^3.3.2",
     "rimraf": "^3.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5"
