@@ -50,23 +50,23 @@ console.log('Firebase Config:', {
 
 
 // Test function to create a user
-async function testFirebaseAuth() {
-  try {
-    // const userCredential = await createUserWithEmailAndPassword(auth, "testuser222@example.com", "password123");
-    console.log("User created:", userCredential.user.uid);
-  } catch (error: unknown) {
-    // Type narrowing for unknown type
-    if (error instanceof Error) {
-      // Now we know error is of type Error, we can safely access its properties
-      console.error("Error during Firebase Auth:", error.message);
-    } else {
-      // In case the error is not of type Error
-      console.error("An unknown error occurred:", error);
-    }
-  }
-}
+// async function testFirebaseAuth() {
+//   try {
+//     // const userCredential = await createUserWithEmailAndPassword(auth, "testuser222@example.com", "password123");
+//     console.log("User created:", userCredential.user.uid);
+//   } catch (error: unknown) {
+//     // Type narrowing for unknown type
+//     if (error instanceof Error) {
+//       // Now we know error is of type Error, we can safely access its properties
+//       console.error("Error during Firebase Auth:", error.message);
+//     } else {
+//       // In case the error is not of type Error
+//       console.error("An unknown error occurred:", error);
+//     }
+//   }
+// }
 
-testFirebaseAuth();
+// testFirebaseAuth();
 
 axios.get('https://firebase.google.com')
   .then(response => console.log('Network Request Successful:', response.status))
