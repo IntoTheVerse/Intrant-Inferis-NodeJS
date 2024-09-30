@@ -52,7 +52,7 @@ console.log('Firebase Config:', {
 // Test function to create a user
 async function testFirebaseAuth() {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, "testuser@example.com", "password123");
+    // const userCredential = await createUserWithEmailAndPassword(auth, "testuser222@example.com", "password123");
     console.log("User created:", userCredential.user.uid);
   } catch (error: unknown) {
     // Type narrowing for unknown type
@@ -474,7 +474,7 @@ app.post('/registerUser', async (req, res) => {
     // Get the wallet address from GameShift using the referenceId
     console.log('Fetching wallet details from GameShift...');
     const walletResponse = await axios.get(
-      `https://api.gameshift.dev/nx/users/${gameShiftResponse.data.referenceId}/wallet`,
+      `https://api.gameshift.dev/nx/users/${gameShiftResponse.data.referenceId}/wallet-address`,
       {
         headers: {
           'accept': 'application/json',
