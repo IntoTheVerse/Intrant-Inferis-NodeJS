@@ -2,14 +2,14 @@
   "name": "ii-backend",
   "version": "1.0.0",
   "description": "Server for Intrant Inferis mobile Game",
-  "main": "server.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "rimraf dist && npx tsc",
     "prestart": "npm run build",
-    "start": "NODE_ENV=production node dist/index.js",
-    "dev": "NODE_ENV=development concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
+    "start": "cross-env NODE_ENV=production node dist/index.js",
+    "dev": "cross-env NODE_ENV=development concurrently \"npx tsc -w\" \"nodemon dist/index.js\"",
     "preserve": "npm run build",
-    "serve": "concurrently \"npx tsc -w\"  \"nodemon dist/index.js\""
+    "serve": "concurrently \"npx tsc -w\" \"nodemon dist/index.js\""
   },
   "repository": {
     "type": "git",
@@ -32,6 +32,7 @@
     "bn.js": "^5.2.1",
     "bs58": "^5.0.0",
     "concurrently": "^7.4.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "firebase": "^10.13.2",
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@types/bn.js": "^5.1.5",
     "@types/bs58": "^4.0.4",
+    "cross-env": "^7.0.3",
     "nodemon": "^3.1.0",
     "types-bn": "^0.0.1"
   }
