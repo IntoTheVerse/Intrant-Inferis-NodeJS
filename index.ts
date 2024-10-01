@@ -583,6 +583,82 @@ app.post('/changePassword', async (req, res) => {
 /*               End of Register User with Gameshift Code                     */
 /* -------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------- */
+/*                             Asset Collection                               */
+/* -------------------------------------------------------------------------- */
+
+/* ---------------------------- Mint Collection------------------------------ */
+
+// Route to create a new collection in GameShift
+app.post('/createCollection', async (req, res) => {
+  const { name, description, imageUrl, contains } = req.body;
+
+  try {
+    // Log incoming request
+    console.log('Create Collection API hit. Request Body:', { name, description, imageUrl, contains });
+
+    // Validate input - all inputs must be provided by the developer
+    if (!name || !description || !imageUrl || !contains) {
+      return res.status(400).json({ message: 'All fields (name, description, imageUrl, contains) are required.' });
+    }
+
+    // Create a new collection in GameShift
+    console.log('Creating new collection in GameShift...');
+    const gameShiftResponse = await axios.post(
+      'https://api.gameshift.dev/nx/asset-collections',
+      {
+        name,
+        description,
+        imageUrl,
+        contains,
+      },
+      {
+        headers: {
+          'accept': 'application/json',
+          'content-type': 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      }
+    );
+    console.log('Collection created in GameShift. Response:', gameShiftResponse.data);
+
+    // Store collection details in Firestore
+    const collectionId = gameShiftResponse.data.id; // Use the collection ID from GameShift response
+    const collectionDoc = doc(firestore, 'ii-collection', collectionId); // 'ii-collection' is the Firestore collection name
+    console.log('Storing collection details in Firestore...');
+    await setDoc(collectionDoc, {
+      name: gameShiftResponse.data.name,
+      description: gameShiftResponse.data.description,
+      imageUrl: gameShiftResponse.data.imageUrl,
+      environment: gameShiftResponse.data.environment,
+      imported: gameShiftResponse.data.imported,
+      mintAddress: gameShiftResponse.data.mintAddress,
+      created: gameShiftResponse.data.created,
+      contains: gameShiftResponse.data.contains,
+    });
+    console.log('Collection details stored in Firestore successfully.');
+
+    // Respond with success
+    res.status(200).json({
+      message: 'Collection created successfully',
+      gameShiftData: gameShiftResponse.data,
+    });
+
+  } catch (error) {
+    console.error('Error during collection creation:', error);
+
+    // Type-check and cast the error to an instance of Error
+    if (error instanceof Error) {
+      console.error("Error during GameShift Collection Creation:", error);
+      console.error("Error details:", error.message, error.name, error.stack);
+      res.status(500).send({ message: 'Collection creation failed', error: error.message });
+    } else {
+      // This handles any non-standard error object (e.g., strings, other objects)
+      console.error("Unexpected error:", error);
+      res.status(500).send({ message: 'An unexpected error occurred', error: String(error) });
+    }
+  }
+});
 
 
 
