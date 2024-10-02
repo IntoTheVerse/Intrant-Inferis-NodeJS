@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import axios from 'axios';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { getDocs, doc, collection, setDoc, updateDoc } from 'firebase/firestore';
 import { setLogLevel } from 'firebase/app';
 setLogLevel('debug');
 
@@ -686,8 +686,92 @@ app.post('/createCollection', async (req, res) => {
     }
   }
 });
+// Define the Collection interface
+interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  environment: string;
+  imageUrl: string;
+  imported: boolean;
+  mintAddress: string;
+  created: number;
+  contains: string;
+}
 
+// Route to fetch all collections from GameShift and update Firestore
+app.get('/fetchCollections', async (req, res) => {
+  try {
+    // Step 1: Fetch all collections from GameShift API
+    console.log('Fetching all collections from GameShift...');
+    const gameShiftResponse = await axios.get('https://api.gameshift.dev/nx/asset-collections', {
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,
+      },
+    });
 
+    const collectionsData: Collection[] = gameShiftResponse.data.data; // The list of collections from the API
+    console.log(`Fetched ${collectionsData.length} collections from GameShift.`);
+
+    // Step 2: Check Firestore for existing collections and compare with the fetched data
+    const firestoreCollectionRef = collection(firestore, 'all-collections');
+    const existingCollectionsSnapshot = await getDocs(firestoreCollectionRef);
+    const existingCollections = existingCollectionsSnapshot.docs.map(doc => doc.id);
+
+    // Step 3: Iterate over the fetched collections and store any new collections in Firestore
+    const newCollections = collectionsData.filter((collection: Collection) => !existingCollections.includes(collection.id));
+    if (newCollections.length === 0) {
+      console.log('No new collections to add.');
+    } else {
+      console.log(`Adding ${newCollections.length} new collections to Firestore.`);
+    }
+
+    for (const newCollection of newCollections) {
+      const collectionDoc = doc(firestore, 'all-collections', newCollection.id);
+      await setDoc(collectionDoc, {
+        id: newCollection.id,
+        name: newCollection.name,
+        description: newCollection.description,
+        environment: newCollection.environment,
+        imageUrl: newCollection.imageUrl,
+        imported: newCollection.imported,
+        mintAddress: newCollection.mintAddress,
+        created: newCollection.created,
+        contains: newCollection.contains,
+      });
+      console.log(`Stored new collection with ID: ${newCollection.id}`);
+    }
+
+    // Step 4: Respond with the list of new collections added to Firestore (if any)
+    res.status(200).json({
+      message: `${newCollections.length} new collections added to Firestore.`,
+      newCollections,
+    });
+
+  } catch (error: unknown) {
+    // Handle errors with axios and Firestore
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError during collection fetch:', error.message);
+      res.status(500).send({
+        message: 'Failed to fetch collections from GameShift',
+        error: error.message,
+      });
+    } else if (error instanceof Error) {
+      console.error('Error during collection fetch:', error.message);
+      res.status(500).send({
+        message: 'An error occurred during collection fetch',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error during collection fetch:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
 
 /* -------------------------------------------------------------------------- */
 /*                                Warrior Code                                */
