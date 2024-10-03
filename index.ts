@@ -3,7 +3,7 @@ import * as dotenv from "dotenv";
 import axios from 'axios';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
-import { getDocs, doc, collection, setDoc, updateDoc } from 'firebase/firestore';
+import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { setLogLevel } from 'firebase/app';
 setLogLevel('debug');
 
@@ -699,6 +699,7 @@ interface Collection {
   contains: string;
 }
 
+/* ---------------- Fetch All Collections and store new collections in Firestore 'all-collections' ------------------------------ */
 // Route to fetch all collections from GameShift and update Firestore
 app.get('/fetchCollections', async (req, res) => {
   try {
@@ -743,10 +744,11 @@ app.get('/fetchCollections', async (req, res) => {
       console.log(`Stored new collection with ID: ${newCollection.id}`);
     }
 
-    // Step 4: Respond with the list of new collections added to Firestore (if any)
+    // Step 4: Respond with the list of new collections added to Firestore and all GameShift collections
     res.status(200).json({
       message: `${newCollections.length} new collections added to Firestore.`,
       newCollections,
+      allGameShiftCollections: collectionsData, // Adding all collections from GameShift in the response
     });
 
   } catch (error: unknown) {
@@ -773,6 +775,8 @@ app.get('/fetchCollections', async (req, res) => {
   }
 });
 
+
+/* -------------------- Import External Collection and store in 'ii-collections'  ------------------------------ */
 
 /// Route to import an external asset collection into GameShift
 app.post('/importCollection', async (req, res) => {
@@ -864,6 +868,75 @@ app.post('/importCollection', async (req, res) => {
       });
     } else {
       console.error('Unknown error during collection import:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+/* ------------------------------ Unimport External Collections in Gameshift ------------------------------ */
+app.post('/unimportCollection', async (req, res) => {
+  const { collectionId } = req.body;
+
+  try {
+    // Log incoming request
+    console.log(`Unimport Collection API hit. Request Body:`, { collectionId });
+
+    // Step 1: Unimport the collection from GameShift
+    console.log(`Unimporting collection from GameShift with ID: ${collectionId}...`);
+    const gameShiftResponse = await axios.post(
+      `https://api.gameshift.dev/nx/asset-collections/${collectionId}/un-import`,
+      {},
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      }
+    );
+
+    // Get the response data
+    const unimportedCollection = gameShiftResponse.data;
+    console.log('Collection unimported successfully:', unimportedCollection);
+
+    // Step 2: Remove the collection from Firestore in 'all-collections' and 'ii-collections'
+    console.log(`Removing collection from Firestore collections 'all-collections' and 'ii-collections'...`);
+
+    // Reference to both collections
+    const allCollectionsDoc = doc(firestore, 'all-collections', collectionId);
+    const iiCollectionsDoc = doc(firestore, 'ii-collections', collectionId);
+
+    // Delete the documents from Firestore
+    await deleteDoc(allCollectionsDoc);
+    await deleteDoc(iiCollectionsDoc);
+
+    console.log(`Collection with ID: ${collectionId} removed from Firestore.`);
+
+    // Step 3: Respond with success message
+    res.status(200).json({
+      message: 'Collection unimported and removed from Firestore successfully',
+      unimportedCollection,
+    });
+
+  } catch (error) {
+    // Handle errors
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError during collection unimport:', error.message);
+      res.status(500).send({
+        message: 'Collection unimport failed',
+        error: error.message,
+        details: error.response?.data,  // Include additional details if available
+      });
+    } else if (error instanceof Error) {
+      console.error('Error during collection unimport:', error.message);
+      res.status(500).send({
+        message: 'Collection unimport failed',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error during collection unimport:', error);
       res.status(500).send({
         message: 'An unexpected error occurred',
         error: String(error),
