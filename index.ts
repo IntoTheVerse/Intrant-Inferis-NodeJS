@@ -773,6 +773,108 @@ app.get('/fetchCollections', async (req, res) => {
   }
 });
 
+
+/// Route to import an external asset collection into GameShift
+app.post('/importCollection', async (req, res) => {
+  const { collectionAddress } = req.body;
+
+  try {
+    // Log incoming request
+    console.log('Import Collection API hit. Request Body:', { collectionAddress });
+
+    // Step 1: Check if the collection is already imported by querying all existing collections
+    console.log('Fetching all existing collections to check for duplicates...');
+    const existingCollectionsResponse = await axios.get(
+      'https://api.gameshift.dev/nx/asset-collections',
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      }
+    );
+
+    const existingCollections: Collection[] = existingCollectionsResponse.data.data;
+
+    // Specify that the collection object being checked is of type 'Collection'
+    const existingCollection = existingCollections.find((collection: Collection) => collection.mintAddress === collectionAddress);
+
+    if (existingCollection) {
+      // If the collection with the mint address already exists, return a response
+      console.log(`Collection with mint address ${collectionAddress} already exists. ID: ${existingCollection.id}`);
+      return res.status(200).json({
+        message: 'Collection already imported',
+        collectionData: existingCollection,
+      });
+    }
+
+    // Step 2: Import the collection into GameShift if it doesn't exist already
+    console.log('Importing external collection into GameShift...');
+    const gameShiftResponse = await axios.post(
+      'https://api.gameshift.dev/nx/asset-collections/import',
+      { collectionAddress },
+      {
+        headers: {
+          accept: 'application/json',
+          'content-type': 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      }
+    );
+
+    const importedCollection: Collection = gameShiftResponse.data;
+    console.log('Collection imported successfully:', importedCollection);
+
+    // Step 3: Store the imported collection details in Firestore
+    console.log('Storing imported collection details in Firestore...');
+    const collectionDoc = doc(firestore, 'ii-collections', importedCollection.id);
+    await setDoc(collectionDoc, {
+      id: importedCollection.id,
+      name: importedCollection.name,
+      description: importedCollection.description,
+      environment: importedCollection.environment,
+      imageUrl: importedCollection.imageUrl,
+      imported: importedCollection.imported,
+      mintAddress: importedCollection.mintAddress,
+      created: importedCollection.created,
+      contains: importedCollection.contains,
+    });
+    console.log('Imported collection details stored in Firestore successfully.');
+
+    // Respond with success
+    res.status(200).json({
+      message: 'Collection imported and stored successfully',
+      gameShiftData: importedCollection,
+    });
+
+  } catch (error) {
+    // Handle errors
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError during collection import:', error.message);
+      res.status(500).send({
+        message: 'Collection import failed',
+        error: error.message,
+        details: error.response?.data,  // Include additional details if available
+      });
+    } else if (error instanceof Error) {
+      console.error('Error during collection import:', error.message);
+      res.status(500).send({
+        message: 'Collection import failed',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error during collection import:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+
+
+
 /* -------------------------------------------------------------------------- */
 /*                                Warrior Code                                */
 /* -------------------------------------------------------------------------- */
