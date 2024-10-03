@@ -48,26 +48,6 @@ console.log('Firebase Config:', {
 });
 
 
-
-// Test function to create a user
-// async function testFirebaseAuth() {
-//   try {
-//     // const userCredential = await createUserWithEmailAndPassword(auth, "testuser222@example.com", "password123");
-//     console.log("User created:", userCredential.user.uid);
-//   } catch (error: unknown) {
-//     // Type narrowing for unknown type
-//     if (error instanceof Error) {
-//       // Now we know error is of type Error, we can safely access its properties
-//       console.error("Error during Firebase Auth:", error.message);
-//     } else {
-//       // In case the error is not of type Error
-//       console.error("An unknown error occurred:", error);
-//     }
-//   }
-// }
-
-// testFirebaseAuth();
-
 axios.get('https://firebase.google.com')
   .then(response => console.log('Network Request Successful:', response.status))
   .catch(error => console.error('Network Request Failed:', error));
@@ -118,6 +98,14 @@ axios.get('https://firebase.google.com')
 //       characterId : 0
 //     },
 //   ];
+
+const WarriorImages = [
+  "https://bafybeidxbix7k7qc76ufrzcoktlixahyvdbycyu2zudgz7e3faspdxqvvi.ipfs.nftstorage.link/",
+  "https://bafkreieyuw62lfsknfnk5lvsbmikzmmobuzpy2j3i4l54637og4aej6uma.ipfs.nftstorage.link/",
+  "https://bafkreidrxl5tcydhmwonds7gaaf5qv7p4zrjhwxzpqlqtco24l76mm5i64.ipfs.nftstorage.link/",
+  "https://bafkreibhz56t5xmtywolroqjvhybsl5ehartjkcqz6praogsfe5wzwnbra.ipfs.nftstorage.link/",
+  "https://bafkreicf4424ooewqt225rhqawi72ymgwafhiqe5n43xoo4oe5odpnr5la.ipfs.nftstorage.link/",
+];
 
 // const AllBuyablePotions = [
 //   {
@@ -944,6 +932,200 @@ app.post('/unimportCollection', async (req, res) => {
     }
   }
 });
+
+
+/* -------------------- Fetch Asset Collection's Asset Items ------------------------------ */
+
+app.get('/fetchCollectionAssets/:collectionId', async (req, res) => {
+  const { collectionId } = req.params; // Get the collection ID from the request parameters
+
+  try {
+    // Log the incoming request
+    console.log(`Fetching assets for collection ID: ${collectionId}`);
+
+    // Step 1: Fetch the assets for the given collection ID from GameShift API
+    const gameShiftResponse = await axios.get(
+      `https://api.gameshift.dev/nx/asset-collections/${collectionId}/assets`,
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,  // Use your GameShift API key from environment variables
+        },
+      }
+    );
+
+    const assetsData = gameShiftResponse.data; // The list of assets from the API
+    console.log(`Fetched ${assetsData.length} assets for collection ID: ${collectionId}`);
+
+    // Step 2: Respond with the fetched assets
+    res.status(200).json({
+      message: `Fetched ${assetsData.length} assets for collection ID: ${collectionId}`,
+      assets: assetsData,
+    });
+
+  } catch (error) {
+    // Handle errors
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError during asset collection fetch:', error.message);
+      res.status(500).send({
+        message: 'Failed to fetch assets from GameShift',
+        error: error.message,
+      });
+    } else if (error instanceof Error) {
+      console.error('Error during asset collection fetch:', error.message);
+      res.status(500).send({
+        message: 'An error occurred during asset collection fetch',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error during asset collection fetch:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+
+/* ------------------------------ Mint Warrior ------------------------------ */
+type CharacterLevel = {
+  attributes: { traitType: string, value: string }[];
+  collectionId: string;
+  description: string;
+  name: string;
+  imageUrl: string;
+};
+
+type Character = {
+  levels: { [key: string]: CharacterLevel }; // Using string as key type
+};
+
+
+const characters: { [key: string]: Character } = {
+  tennon: {
+    levels: {
+      '1': { // Use string key
+        attributes: [
+          { traitType: 'HP', value: '190' },
+          { traitType: 'STM', value: '190' },
+          { traitType: 'LVL', value: '1' },
+          { traitType: 'GLD', value: 'Strykur' }
+        ],
+        collectionId: 'cb122588-74a2-4386-90c4-b6b8980180b3',
+        description: 'The mighty Tennon of Guild Strykur',
+        name: 'Tennon',
+        imageUrl: 'https://bafybeidxbix7k7qc76ufrzcoktlixahyvdbycyu2zudgz7e3faspdxqvvi.ipfs.nftstorage.link/'
+      }
+      // Add more levels if needed
+    }
+  }
+};
+
+app.post('/createUniqueAsset', async (req, res) => {
+  const { destinationUserReferenceId, character, level } = req.body;
+  const developerWalletAddress = "35VNSn71tXhXDkqhQt4DejoWBQ8F7fnSFoTW2gWyutnG";
+
+  try {
+    // Log incoming data for debugging
+    console.log('Incoming Request:', req.body);
+
+    // Fetch character and level details from the reference object
+    const characterDetails = characters[character]?.levels[level];
+
+    // Log character details for debugging
+    console.log('Character Details:', characterDetails);
+
+    if (!characterDetails) {
+      return res.status(400).json({ message: 'Invalid character or level' });
+    }
+
+    // Define the royaltyInfo
+    const royaltyInfo = {
+      recipients: [{ address: developerWalletAddress, share: 100 }],
+      sellerFeeBasisPoints: 500 // 5% royalty
+    };
+
+    // Prepare the request body for the unique asset creation
+    const requestBody = {
+      details: {
+        royaltyInfo: royaltyInfo,
+        attributes: characterDetails.attributes,
+        collectionId: characterDetails.collectionId,
+        description: characterDetails.description,
+        name: characterDetails.name,
+        imageUrl: characterDetails.imageUrl
+      },
+      destinationUserReferenceId: destinationUserReferenceId
+    };
+
+    // Make the POST request to create the unique asset
+    // Inside your try block where you handle the API response
+    const createAssetResponse = await axios.post(
+      'https://api.gameshift.dev/nx/unique-assets',
+      requestBody,
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+          'content-type': 'application/json'
+        }
+      }
+    );
+
+    // Log the full response for debugging
+    console.log('Create Asset Response:', createAssetResponse.data);
+
+    // Extract the asset ID (now using 'id' instead of 'assetId')
+    const assetId = createAssetResponse.data?.id; // Update here
+
+    if (!assetId) {
+      throw new Error('Asset ID is undefined in response');
+    }
+
+    // Update Firestore: Store the minted asset under the user's subcollection
+    const assetData = {
+      assetId: assetId,
+      assetDetails: characterDetails,
+      createdAt: new Date(),
+      ownerReferenceId: destinationUserReferenceId,
+      developerWallet: developerWalletAddress,
+    };
+
+    await setDoc(doc(collection(firestore, 'users'), destinationUserReferenceId, 'assets', assetId), assetData);
+
+    // Respond with the created asset details
+    res.status(200).json({
+      message: 'Unique asset created successfully',
+      assetData: createAssetResponse.data
+    });
+
+  } catch (error) {
+    // Error handling
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError:', error.message);
+      res.status(500).send({
+        message: 'Failed to create unique asset',
+        error: error.message,
+        details: error.response?.data, // Include additional details if available
+      });
+    } else if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).send({
+        message: 'An error occurred during unique asset creation',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+
 
 
 
