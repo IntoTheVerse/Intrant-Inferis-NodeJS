@@ -1145,44 +1145,6 @@ app.get('/fetchCollectionAssets/:collectionId', async (req, res) => {
 //   }
 // });
 
-// // Signature Generation
-function generateWebhookSignature(webhookId: string, webhookData: object, secretKey: string) {
-  const webhookTimestamp = Math.floor(Date.now());  // Current timestamp in milliseconds
-  const webhookDataStr = JSON.stringify(webhookData);  // Stringify the webhook data
-  const signedContent = `${webhookId}.${webhookTimestamp}.${webhookDataStr}`;
-
-  const secretBytes = Buffer.from(secretKey, 'base64');  // Convert secret key to bytes
-  const expectedSignature = crypto
-    .createHmac('sha256', secretBytes)
-    .update(signedContent)
-    .digest('base64');
-  
-  console.log(`Signature: v1,${expectedSignature}`);
-  console.log(`Webhook Data String: ${webhookDataStr}`);
-
-  return {
-    signature: `v1,${expectedSignature}`,
-    timestamp: webhookTimestamp
-  };
-}
-
-/* ------------------------------ Testing: Generate Signature ------------------------------ */
-app.post('/test-generate-signature', (req, res) => {
-  const webhookId = 'create-warrior-webhook';  // Example ID
-  const secretKey = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Your secret key from GameShift
-  
-  if (!secretKey) {
-    return res.status(400).json({ message: 'Secret key is not defined' });
-  }
-
-  const webhookData = req.body;  // Data to sign (should match what GameShift sends)
-  
-  const { signature, timestamp } = generateWebhookSignature(webhookId, webhookData, secretKey);
-
-  res.status(200).json({ signature, timestamp });
-});
-
-
 
 /* ------------------------------ Webhook Verification ------------------------------ */
 function verifyWebhook(
@@ -1210,32 +1172,50 @@ function verifyWebhook(
 
 /* ------------------------------ Webhook: Mint Completed ------------------------------ */
 app.post('/webhooks/mint-completed', async (req, res) => {
-  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Secret from GameShift
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
 
   if (!webhookSecret) {
-    throw new Error('GAMESHIFT_WEBHOOK_VALIDATION_KEY is not defined in environment variables');
+    console.error('Webhook secret not found');
+    return res.status(500).json({ message: 'Webhook secret not configured' });
   }
 
   // Extract headers for webhook signature verification
-  const webhookId = req.headers['webhook-id'] as string;
-  const webhookTimestamp = req.headers['webhook-timestamp'] as string;
-  const webhookSignature = req.headers['webhook-signature'] as string;
+  const webhookId = Array.isArray(req.headers['webhook-id']) 
+    ? req.headers['webhook-id'][0] 
+    : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) 
+    ? req.headers['webhook-timestamp'][0] 
+    : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) 
+    ? req.headers['webhook-signature'][0] 
+    : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    console.log('Missing webhook headers');
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
 
   // Extract the event data from the body
-  const webhookData = req.body;
+  const webhookData = req.body?.data;
+  
+  // Verify required fields are present
+  const assetId = webhookData?.assetId;
+  const ownerReferenceId = webhookData?.userId; // Use userId as ownerReferenceId
+
+  if (!assetId || !ownerReferenceId) {
+    console.log('Missing required assetId or ownerReferenceId');
+    return res.status(400).json({ message: 'Missing required assetId or ownerReferenceId' });
+  }
 
   // Verify the webhook signature
   const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+  
   if (!isVerified) {
     console.log('Invalid webhook signature, rejecting request');
     return res.status(403).json({ message: 'Invalid webhook signature' });
   }
 
-  // Extract necessary details from the event
-  const { assetId, collectionId, details } = webhookData;
-  const ownerReferenceId = details?.owner?.id;
-  const mintAddress = webhookData?.mintAddress || '';  // Extract mint address from webhook data
-
+  // Now proceed with your API call and Firestore update
   try {
     // Fetch item details from GameShift API using axios
     const apiUrl = `https://api.gameshift.dev/nx/items/${assetId}`;
@@ -1257,23 +1237,26 @@ app.post('/webhooks/mint-completed', async (req, res) => {
 
     const item = itemDetails.item;
 
+    // Ensure owner address is not undefined, otherwise use an empty string
+    const ownerAddress = item.owner?.address || '';
+
     // Prepare Firestore update with fetched item details
     const assetDoc = doc(collection(firestore, 'users'), ownerReferenceId, 'assets', assetId);
-    await updateDoc(assetDoc, {
+    await setDoc(assetDoc, {
       status: 'Minted',
       mintCompletedAt: new Date(),
       collectionId: item.collection.id,
       assetDetails: itemDetails,  // Update with the full fetched item details
       mintAddress: item.mintAddress,  // Update with the fetched mint address
       owner: {
-        address: item.owner?.address,
+        address: ownerAddress,  // Ensure owner address is valid
         referenceId: ownerReferenceId
-      },  // Update with the owner details
+      },
       attributes: item.attributes,
       imageUrl: item.imageUrl,
       description: item.description,
       name: item.name
-    });
+    }, { merge: true });
 
     res.status(200).json({ message: 'Mint completed and item details updated successfully' });
   } catch (error) {
@@ -1288,70 +1271,6 @@ app.post('/webhooks/mint-completed', async (req, res) => {
         }
       }
 });
-
-
-// app.post('/webhooks/mint-completed', async (req, res) => {
-//   const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Secret from GameShift
-
-//   if (!webhookSecret) {
-//     return res.status(400).json({ message: 'GAMESHIFT_WEBHOOK_VALIDATION_KEY is not defined' });
-//   }
-
-//   // Ensure headers are treated as strings
-//   const webhookId: string = req.headers['webhook-id'] as string || '';
-//   const webhookTimestamp: string = req.headers['webhook-timestamp'] as string || '';
-//   const webhookSignature: string = req.headers['webhook-signature'] as string || '';
-
-//   // Extract webhookData from the request body
-//   const webhookData = req.body;
-
-//   // Log the incoming webhook data for debugging
-//   console.log("Incoming Webhook Data:", JSON.stringify(webhookData, null, 2));
-
-//   // Verify the webhook signature
-//   const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
-
-//   if (!isVerified) {
-//     console.log('Invalid webhook signature, rejecting request');
-//     return res.status(403).json({ message: 'Invalid webhook signature' });
-//   }
-
-//   // Process the mint-completed event after successful verification
-//   const { assetId, collectionId, details } = webhookData;
-//   const ownerReferenceId = details?.owner?.id;
-//   const mintAddress = webhookData?.mintAddress || '';  
-//   const ownerObject = details?.owner || {};  
-
-//   try {
-//     // Update Firestore with the minted asset details
-//     const assetDoc = doc(collection(firestore, 'users'), ownerReferenceId, 'assets', assetId);
-//     await updateDoc(assetDoc, {
-//       status: 'Minted',
-//       mintCompletedAt: new Date(),
-//       collectionId: collectionId,
-//       assetDetails: webhookData,
-//       mintAddress: mintAddress,
-//       owner: ownerObject,
-//     });
-
-//     res.status(200).json({ message: 'Mint completed event processed successfully' });
-//   } catch (error) {
-//     if (error instanceof Error) {
-//       // Handle the error
-//       console.error('Error:', error.message);
-//       res.status(500).json({ message: error.message });
-//     } else {
-//       // Handle non-Error case (if necessary)
-//       console.error('Unexpected error:', error);
-//       res.status(500).json({ message: 'An unexpected error occurred' });
-//     }
-//   }
-// });
-
-
-
-
-
 
 /* ------------------------------ Create Unique Asset ------------------------------ */
 type CharacterLevel = {
