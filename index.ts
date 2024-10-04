@@ -1,6 +1,7 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
 import axios from 'axios';
+import * as crypto from 'crypto';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
 import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -989,6 +990,102 @@ app.get('/fetchCollectionAssets/:collectionId', async (req, res) => {
 
 
 /* ------------------------------ Mint Warrior ------------------------------ */
+
+// Signature Generation
+function generateWebhookSignature(webhookId: string, webhookData: object, secretKey: string) {
+  const webhookTimestamp = Math.floor(Date.now());  // Current timestamp in milliseconds
+  const webhookDataStr = JSON.stringify(webhookData);  // Stringify the webhook data
+  const signedContent = `${webhookId}.${webhookTimestamp}.${webhookDataStr}`;
+
+  const secretBytes = Buffer.from(secretKey, 'base64');  // Convert secret key to bytes
+  const expectedSignature = crypto
+    .createHmac('sha256', secretBytes)
+    .update(signedContent)
+    .digest('base64');
+  
+  console.log(`Signature: v1,${expectedSignature}`);
+  console.log(`Webhook Data String: ${webhookDataStr}`);
+
+  return {
+    signature: `v1,${expectedSignature}`,
+    timestamp: webhookTimestamp
+  };
+}
+
+/* ------------------------------ Webhook Verification ------------------------------ */
+function verifyWebhook(
+  webhookId: string,
+  webhookTimestamp: string,
+  webhookSignature: string,
+  webhookData: object,  // Replace with actual type if needed
+  secretKey: string
+): boolean {
+  const webhookDataStr = JSON.stringify(webhookData);  // Stringify the webhook data
+  const signedContent = `${webhookId}.${webhookTimestamp}.${webhookDataStr}`;  // Concatenate signature components
+  const secretBytes = Buffer.from(secretKey, 'base64');  // Convert secret key to bytes
+  const expectedSignature = crypto
+    .createHmac('sha256', secretBytes)
+    .update(signedContent)
+    .digest('base64');
+
+  console.log("Webhook Timestamp:", webhookTimestamp);
+  console.log("Webhook Signature:", webhookSignature);
+  console.log("Generated Signature:", `v1,${expectedSignature}`);
+  console.log("Webhook Data String:", webhookDataStr);
+
+  return `v1,${expectedSignature}` === webhookSignature;
+}
+
+/* ------------------------------ Webhook: Mint Completed ------------------------------ */
+app.post('/webhooks/mint-completed', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Your secret from GameShift dashboard
+  console.log(`Webhook Secret Key: ${webhookSecret}`);
+
+  if (!webhookSecret) {
+    throw new Error('GAMESHIFT_WEBHOOK_VALIDATION_KEY is not defined in environment variables');
+  }
+
+  // Extract headers
+  const webhookId = req.headers['webhook-id'] as string;
+  const webhookTimestamp = req.headers['webhook-timestamp'] as string;
+  const webhookSignature = req.headers['webhook-signature'] as string;
+
+  // Extract the event data from the body
+  const webhookData = req.body;  // GameShift sends the event details inside `data`
+
+  // Verify the webhook signature
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+  if (!isVerified) {
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  // Log the event for debugging
+  console.log('Mint completed event received:', webhookData);
+
+  // Extract the necessary details from the event
+  const { assetId, collectionId, details } = webhookData;
+  const ownerReferenceId = details?.owner?.id;
+
+  try {
+    // Update Firestore with the minted asset details
+    const assetDoc = doc(collection(firestore, 'users'), ownerReferenceId, 'assets', assetId);
+    await updateDoc(assetDoc, {
+      status: 'Minted',
+      mintCompletedAt: new Date(),
+      collectionId: collectionId,
+      assetDetails: webhookData,
+    });
+
+    // Respond with success
+    res.status(200).json({ message: 'Mint completed event processed successfully' });
+  } catch (error) {
+    console.error('Error updating Firestore:', error);
+    res.status(500).json({ message: 'Error processing mint completed event', error: (error as Error).message });
+  }
+});
+
+
+/* ------------------------------ Create Unique Asset ------------------------------ */
 type CharacterLevel = {
   attributes: { traitType: string, value: string }[];
   collectionId: string;
@@ -1000,7 +1097,6 @@ type CharacterLevel = {
 type Character = {
   levels: { [key: string]: CharacterLevel }; // Using string as key type
 };
-
 
 const characters: { [key: string]: Character } = {
   tennon: {
@@ -1060,7 +1156,6 @@ app.post('/createUniqueAsset', async (req, res) => {
     };
 
     // Make the POST request to create the unique asset
-    // Inside your try block where you handle the API response
     const createAssetResponse = await axios.post(
       'https://api.gameshift.dev/nx/unique-assets',
       requestBody,
@@ -1077,7 +1172,7 @@ app.post('/createUniqueAsset', async (req, res) => {
     console.log('Create Asset Response:', createAssetResponse.data);
 
     // Extract the asset ID (now using 'id' instead of 'assetId')
-    const assetId = createAssetResponse.data?.id; // Update here
+    const assetId = createAssetResponse.data?.id;
 
     if (!assetId) {
       throw new Error('Asset ID is undefined in response');
@@ -1090,13 +1185,14 @@ app.post('/createUniqueAsset', async (req, res) => {
       createdAt: new Date(),
       ownerReferenceId: destinationUserReferenceId,
       developerWallet: developerWalletAddress,
+      status: 'Pending Mint'  // Mark the status as pending
     };
 
     await setDoc(doc(collection(firestore, 'users'), destinationUserReferenceId, 'assets', assetId), assetData);
 
     // Respond with the created asset details
     res.status(200).json({
-      message: 'Unique asset created successfully',
+      message: 'Unique asset created successfully, waiting for mint completion',
       assetData: createAssetResponse.data
     });
 
@@ -1124,6 +1220,24 @@ app.post('/createUniqueAsset', async (req, res) => {
     }
   }
 });
+
+/* ------------------------------ Testing: Generate Signature ------------------------------ */
+app.post('/test-generate-signature', (req, res) => {
+  const webhookId = 'create-warrior-webhook';  // Example ID
+  const secretKey = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Your secret key from GameShift
+  
+  if (!secretKey) {
+    return res.status(400).json({ message: 'Secret key is not defined' });
+  }
+
+  const webhookData = req.body;  // Data to sign (should match what GameShift sends)
+  
+  const { signature, timestamp } = generateWebhookSignature(webhookId, webhookData, secretKey);
+
+  res.status(200).json({ signature, timestamp });
+});
+
+
 
 
 
