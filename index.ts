@@ -1614,6 +1614,164 @@ app.post('/webhooks/unlisting-complete', async (req, res) => {
 
 
 /* -------------------------------------------------------------------------- */
+/*        Buying Warrior previously listed for Sale on Marketplace            */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ Buy Asset Route ------------------------------ */
+app.post('/buy-item', async (req, res) => {
+  const { assetId, buyerId } = req.body;
+
+  try {
+    // Make the request to buy the listed asset
+    const options = {
+      method: 'POST',
+      url: `https://api.gameshift.dev/nx/unique-assets/${assetId}/buy`,
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,  // Your GameShift API key from environment variables
+        'content-type': 'application/json',
+      },
+      data: { buyerId }  // Buyer ID from the request
+    };
+
+    const response = await axios.request(options);
+
+    // Extract transactionId and consentUrl from the response
+    const { transactionId, consentUrl } = response.data;
+
+    // Return the transaction details and consent URL to the frontend
+    res.status(200).json({
+      message: 'Asset purchase initiated',
+      transactionId,
+      consentUrl
+    });
+
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError:', error.message);
+      res.status(500).send({
+        message: 'Failed to purchase asset',
+        error: error.message,
+        details: error.response?.data,
+      });
+    } else if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).send({
+        message: 'An error occurred during asset purchase',
+        error: error.message,
+      });
+    } else {
+      console.error('Unknown error:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+
+
+/* ------------------------------ WEBHOOK: Buy Asset Status Fetch ------------------------------ */
+app.post('/webhooks/buy-complete', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers for webhook signature verification
+  const webhookId = Array.isArray(req.headers['webhook-id']) 
+    ? req.headers['webhook-id'][0] 
+    : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) 
+    ? req.headers['webhook-timestamp'][0] 
+    : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) 
+    ? req.headers['webhook-signature'][0] 
+    : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract the event data
+  const webhookData = req.body?.data;
+
+  // Verify the webhook signature
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+
+  if (!isVerified) {
+    console.log('Invalid webhook signature');
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  const assetId = webhookData?.assetId;
+  const oldOwnerReferenceId = webhookData?.sellerId; // Assuming sellerId is the old owner
+  const newOwnerReferenceId = webhookData?.buyerId; // Assuming buyerId is the new owner
+
+  if (!assetId || !oldOwnerReferenceId || !newOwnerReferenceId) {
+    return res.status(400).json({ message: 'Missing assetId or ownerReferenceId' });
+  }
+
+  // Fetch the updated asset details from GameShift API
+  try {
+    const apiUrl = `https://api.gameshift.dev/nx/items/${assetId}`;
+    const apiOptions = {
+      method: 'GET',
+      url: apiUrl,
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY
+      }
+    };
+
+    const apiResponse = await axios.request(apiOptions);
+    const itemDetails = apiResponse.data;
+
+    if (!itemDetails || !itemDetails.item) {
+      throw new Error('Unable to fetch item details from GameShift API');
+    }
+
+    const item = itemDetails.item;
+    const ownerAddress = item.owner?.address || '';
+
+    // Delete the asset document from the old owner
+    const oldOwnerAssetDoc = doc(collection(firestore, 'users'), oldOwnerReferenceId, 'assets', assetId);
+    await deleteDoc(oldOwnerAssetDoc);
+
+    // Add the asset document to the new owner
+    const newOwnerAssetDoc = doc(collection(firestore, 'users'), newOwnerReferenceId, 'assets', assetId);
+    await setDoc(newOwnerAssetDoc, {
+      status: 'Owned',
+      ownedAt: new Date(),
+      forSale: false,  // Asset is no longer for sale
+      price: null,  // Clear price information
+      assetDetails: itemDetails,  // Store full asset details
+      mintAddress: item.mintAddress,  // Keep the mint address updated
+      owner: {
+        address: ownerAddress,
+        referenceId: newOwnerReferenceId
+      },
+      attributes: item.attributes,
+      imageUrl: item.imageUrl,
+      description: item.description,
+      name: item.name
+    }, { merge: true });
+
+    res.status(200).json({ message: 'Asset transfer completed and details updated successfully' });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).json({ message: error.message });
+    } else {
+      console.error('Unexpected error:', error);
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  }
+});
+
+/* -------------------------------------------------------------------------- */
 /*                                Warrior Code                                */
 /* -------------------------------------------------------------------------- */
 
