@@ -1322,15 +1322,15 @@ app.post('/createUniqueAsset', async (req, res) => {
     }
 
     // Define the royaltyInfo
-    const royaltyInfo = {
-      recipients: [{ address: developerWalletAddress, share: 100 }],
-      sellerFeeBasisPoints: 500 // 5% royalty
-    };
+    // const royaltyInfo = {
+    //   recipients: [{ address: developerWalletAddress, share: 100 }],
+    //   sellerFeeBasisPoints: 500 // 5% royalty
+    // };
 
     // Prepare the request body for the unique asset creation
     const requestBody = {
       details: {
-        royaltyInfo: royaltyInfo,
+        // royaltyInfo: royaltyInfo,
         attributes: characterDetails.attributes,
         collectionId: characterDetails.collectionId,
         description: characterDetails.description,
