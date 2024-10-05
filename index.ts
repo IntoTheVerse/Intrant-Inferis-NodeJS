@@ -989,164 +989,15 @@ app.get('/fetchCollectionAssets/:collectionId', async (req, res) => {
 });
 
 
-/* ------------------------------ Mint Warrior ------------------------------ */
+
+/* -------------------------------------------------------------------------- */
+/*                                Mint Warrior                               */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ Mint Warrior Webhook ------------------------------ */
 
 
-
-
-// app.post('/webhooks/mint-completed', async (req, res) => {
-//   const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;  // Your secret from GameShift dashboard
-//   console.log(`Webhook Secret Key: ${webhookSecret}`);
-
-//   if (!webhookSecret) {
-//     throw new Error('GAMESHIFT_WEBHOOK_VALIDATION_KEY is not defined in environment variables');
-//   }
-
-//   // Extract headers
-//   const webhookId = req.headers['webhook-id'] as string;
-//   const webhookTimestamp = req.headers['webhook-timestamp'] as string;
-//   const webhookSignature = req.headers['webhook-signature'] as string;
-
-//   // Extract the event data from the body
-//   const webhookData = req.body;  // GameShift sends the event details inside `data`
-
-//   // Verify the webhook signature
-//   const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
-//   if (!isVerified) {
-//     return res.status(403).json({ message: 'Invalid webhook signature' });
-//   }
-
-//   // Log the event for debugging
-//   console.log('Mint completed event received:', webhookData);
-
-//   // Extract the necessary details from the event
-//   const { assetId, collectionId, details } = webhookData;
-//   const ownerReferenceId = details?.owner?.id;
-
-//   try {
-//     // Update Firestore with the minted asset details
-//     const assetDoc = doc(collection(firestore, 'users'), ownerReferenceId, 'assets', assetId);
-//     await updateDoc(assetDoc, {
-//       status: 'Minted',
-//       mintCompletedAt: new Date(),
-//       collectionId: collectionId,
-//       assetDetails: webhookData,
-//     });
-
-//     // Respond with success
-//     res.status(200).json({ message: 'Mint completed event processed successfully' });
-//   } catch (error) {
-//     console.error('Error updating Firestore:', error);
-//     res.status(500).json({ message: 'Error processing mint completed event', error: (error as Error).message });
-//   }
-// });
-
-
-// app.post('/createUniqueAsset', async (req, res) => {
-//   const { destinationUserReferenceId, character, level } = req.body;
-//   const developerWalletAddress = "35VNSn71tXhXDkqhQt4DejoWBQ8F7fnSFoTW2gWyutnG";
-
-//   try {
-//     // Log incoming data for debugging
-//     console.log('Incoming Request:', req.body);
-
-//     // Fetch character and level details from the reference object
-//     const characterDetails = characters[character]?.levels[level];
-
-//     // Log character details for debugging
-//     console.log('Character Details:', characterDetails);
-
-//     if (!characterDetails) {
-//       return res.status(400).json({ message: 'Invalid character or level' });
-//     }
-
-//     // Define the royaltyInfo
-//     const royaltyInfo = {
-//       recipients: [{ address: developerWalletAddress, share: 100 }],
-//       sellerFeeBasisPoints: 500 // 5% royalty
-//     };
-
-//     // Prepare the request body for the unique asset creation
-//     const requestBody = {
-//       details: {
-//         royaltyInfo: royaltyInfo,
-//         attributes: characterDetails.attributes,
-//         collectionId: characterDetails.collectionId,
-//         description: characterDetails.description,
-//         name: characterDetails.name,
-//         imageUrl: characterDetails.imageUrl
-//       },
-//       destinationUserReferenceId: destinationUserReferenceId
-//     };
-
-//     // Make the POST request to create the unique asset
-//     const createAssetResponse = await axios.post(
-//       'https://api.gameshift.dev/nx/unique-assets',
-//       requestBody,
-//       {
-//         headers: {
-//           accept: 'application/json',
-//           'x-api-key': process.env.GAMESHIFT_API_KEY,
-//           'content-type': 'application/json'
-//         }
-//       }
-//     );
-
-//     // Log the full response for debugging
-//     console.log('Create Asset Response:', createAssetResponse.data);
-
-//     // Extract the asset ID (now using 'id' instead of 'assetId')
-//     const assetId = createAssetResponse.data?.id;
-
-//     if (!assetId) {
-//       throw new Error('Asset ID is undefined in response');
-//     }
-
-//     // Update Firestore: Store the minted asset under the user's subcollection
-//     const assetData = {
-//       assetId: assetId,
-//       assetDetails: characterDetails,
-//       createdAt: new Date(),
-//       ownerReferenceId: destinationUserReferenceId,
-//       developerWallet: developerWalletAddress,
-//       status: 'Pending Mint'  // Mark the status as pending
-//     };
-
-//     await setDoc(doc(collection(firestore, 'users'), destinationUserReferenceId, 'assets', assetId), assetData);
-
-//     // Respond with the created asset details
-//     res.status(200).json({
-//       message: 'Unique asset created successfully, waiting for mint completion',
-//       assetData: createAssetResponse.data
-//     });
-
-//   } catch (error) {
-//     // Error handling
-//     if (axios.isAxiosError(error)) {
-//       console.error('AxiosError:', error.message);
-//       res.status(500).send({
-//         message: 'Failed to create unique asset',
-//         error: error.message,
-//         details: error.response?.data, // Include additional details if available
-//       });
-//     } else if (error instanceof Error) {
-//       console.error('Error:', error.message);
-//       res.status(500).send({
-//         message: 'An error occurred during unique asset creation',
-//         error: error.message,
-//       });
-//     } else {
-//       console.error('Unknown error:', error);
-//       res.status(500).send({
-//         message: 'An unexpected error occurred',
-//         error: String(error),
-//       });
-//     }
-//   }
-// });
-
-
-/* ------------------------------ Webhook Verification ------------------------------ */
+// Webhook Verification standard function
 function verifyWebhook(
   webhookId: string,
   webhookTimestamp: string,
@@ -1170,7 +1021,7 @@ function verifyWebhook(
   return `v1,${expectedSignature}` === webhookSignature;
 }
 
-/* ------------------------------ Webhook: Mint Completed ------------------------------ */
+// Webhook: Mint Completed 
 app.post('/webhooks/mint-completed', async (req, res) => {
   const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
 
@@ -1427,7 +1278,171 @@ app.post('/createUniqueAsset', async (req, res) => {
   }
 });
 
+/* -------------------------------------------------------------------------- */
+/*                 End of Mint Warrior Code                                   */
+/* -------------------------------------------------------------------------- */
 
+
+/* -------------------------------------------------------------------------- */
+/*                 List Warrior for Sale on Marketplace                       */
+/* -------------------------------------------------------------------------- */
+
+/* ------------------------------ List Asset Route ------------------------------ */
+
+// List Warrior
+app.post('/list-asset-for-sale', async (req, res) => {
+  const { assetId, price, currencyId } = req.body;
+
+  try {
+    // Make the request to list the asset for sale
+    const options = {
+      method: 'POST',
+      url: `https://api.gameshift.dev/nx/unique-assets/${assetId}/list-for-sale`,
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY, // GameShift API key from env variables
+        'content-type': 'application/json',
+      },
+      data: { 
+        price: { 
+          currencyId,  // Currency like 'USDC', 'SOL', or custom ones
+          naturalAmount: price  // Price to be set (must be a natural amount)
+        }
+      }
+    };
+
+    const response = await axios.request(options);
+
+    // Extract transaction ID and consent URL from the response
+    const { transactionId, consentUrl } = response.data;
+
+    // Return transaction details and consent URL to frontend
+    res.status(200).json({
+      message: 'Asset listed for sale successfully',
+      transactionId,
+      consentUrl
+    });
+  } catch (error: unknown) {
+    // Error handling
+    if (axios.isAxiosError(error)) {
+      console.error('AxiosError:', error.message);
+      res.status(500).send({
+        message: 'Failed to list unique asset or fetch listing details',
+        error: error.message,
+        details: error.response?.data, // Include additional details if available
+      });
+    } else if (error instanceof Error) {
+      // Handling general errors
+      console.error('Error:', error.message);
+      res.status(500).send({
+        message: 'An error occurred during unique asset listing or asset fetching',
+        error: error.message,
+      });
+    } else {
+      // Catch-all for unknown errors
+      console.error('Unknown error:', error);
+      res.status(500).send({
+        message: 'An unexpected error occurred',
+        error: String(error),
+      });
+    }
+  }
+});
+
+/* ------------------------------ Asset Listing Completed Webhook ------------------------------ */
+
+app.post('/webhooks/listing-complete', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers for webhook signature verification
+  const webhookId = Array.isArray(req.headers['webhook-id']) 
+    ? req.headers['webhook-id'][0] 
+    : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) 
+    ? req.headers['webhook-timestamp'][0] 
+    : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) 
+    ? req.headers['webhook-signature'][0] 
+    : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract event data from the body
+  const webhookData = req.body?.data;
+
+  // Verify the signature
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+
+  if (!isVerified) {
+    console.log('Invalid webhook signature');
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  const assetId = webhookData?.assetId;
+  const ownerReferenceId = webhookData?.sellerId; // Adjusted to sellerId
+
+  if (!assetId || !ownerReferenceId) {
+    return res.status(400).json({ message: 'Missing assetId or ownerReferenceId' });
+  }
+
+  // Fetch the updated asset details from GameShift API
+  try {
+    const apiUrl = `https://api.gameshift.dev/nx/items/${assetId}`;
+    const apiOptions = {
+      method: 'GET',
+      url: apiUrl,
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY
+      }
+    };
+
+    const apiResponse = await axios.request(apiOptions);
+    const itemDetails = apiResponse.data;
+
+    if (!itemDetails || !itemDetails.item) {
+      throw new Error('Unable to fetch item details from GameShift API');
+    }
+
+    const item = itemDetails.item;
+    const ownerAddress = item.owner?.address || '';
+
+    // Prepare Firestore update with fetched item details
+    const assetDoc = doc(collection(firestore, 'users'), ownerReferenceId, 'assets', assetId);
+    await setDoc(assetDoc, {
+      status: 'Listed',
+      listedAt: new Date(),
+      forSale: item.forSale,  
+      price: item.price,  
+      assetDetails: itemDetails,  
+      mintAddress: item.mintAddress,  
+      owner: {
+        address: ownerAddress,  
+        referenceId: ownerReferenceId
+      },
+      attributes: item.attributes,
+      imageUrl: item.imageUrl,
+      description: item.description,
+      name: item.name
+    }, { merge: true });
+
+    res.status(200).json({ message: 'Asset listed successfully and details updated' });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).json({ message: error.message });
+    } else {
+      console.error('Unexpected error:', error);
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  }
+});
 
 
 /* -------------------------------------------------------------------------- */
