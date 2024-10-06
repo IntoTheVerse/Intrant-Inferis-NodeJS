@@ -726,133 +726,7 @@ app.post('/webhooks/collection-mint-completed', async (req, res) => {
   }
 });
 
-// Webhook Verification Function
-// function verifyWebhook(
-//   webhookId: string,
-//   webhookTimestamp: string,
-//   webhookSignature: string,
-//   webhookData: object,
-//   secretKey: string
-// ): boolean {
-//   const webhookDataStr = JSON.stringify(webhookData);  // Stringify the webhook data
-//   const signedContent = `${webhookId}.${webhookTimestamp}.${webhookDataStr}`;  // Concatenate signature components
-//   const secretBytes = Buffer.from(secretKey, 'base64');  // Convert secret key to bytes
-//   const expectedSignature = crypto
-//     .createHmac('sha256', secretBytes)
-//     .update(signedContent)
-//     .digest('base64');
 
-//   console.log("Webhook Timestamp:", webhookTimestamp);
-//   console.log("Webhook Signature:", webhookSignature);
-//   console.log("Generated Signature:", `v1,${expectedSignature}`);
-//   console.log("Webhook Data String:", webhookDataStr);
-
-//   return `v1,${expectedSignature}` === webhookSignature;
-// }
-
-
-
-
-
-
-// // Route to create a new collection in GameShift
-// app.post('/createCollection', async (req, res) => {
-//   const { name, description, imageUrl, contains } = req.body;
-
-//   try {
-//     // Log incoming request
-//     console.log('Create Collection API hit. Request Body:', { name, description, imageUrl, contains });
-
-//     // Step 1: Create the collection with GameShift
-//     console.log('Creating collection with GameShift...');
-//     const gameShiftResponse = await axios.post(
-//       'https://api.gameshift.dev/nx/asset-collections',
-//       {
-//         name,
-//         description,
-//         imageUrl,
-//         contains,
-//       },
-//       {
-//         headers: {
-//           accept: 'application/json',
-//           'content-type': 'application/json',
-//           'x-api-key': process.env.GAMESHIFT_API_KEY,
-//         },
-//       }
-//     );
-
-//     const collectionId = gameShiftResponse.data.id;
-//     console.log(`Collection created. ID: ${collectionId}`);
-
-//     // Step 2: Introduce a delay of 5 seconds before fetching the full collection details
-//     console.log('Waiting for 5 seconds to allow mintAddress to be confirmed...');
-//     await new Promise(resolve => setTimeout(resolve, 20000)); // 20-second delay
-
-//     // Step 3: Fetch the full collection details including the mintAddress
-//     console.log(`Fetching collection details for ID: ${collectionId} to retrieve mintAddress...`);
-//     const collectionDetailsResponse = await axios.get(
-//       `https://api.gameshift.dev/nx/asset-collections/${collectionId}?includeStats=false`,
-//       {
-//         headers: {
-//           accept: 'application/json',
-//           'x-api-key': process.env.GAMESHIFT_API_KEY,
-//         },
-//       }
-//     );
-
-//     const fullCollectionData = collectionDetailsResponse.data;
-//     console.log('Full collection details retrieved:', fullCollectionData);
-
-//     // Step 4: Store the collection details in Firestore, including the mintAddress
-//     console.log('Storing collection details in Firestore...');
-//     const collectionDoc = doc(firestore, 'ii-collections', collectionId);
-//     await setDoc(collectionDoc, {
-//       id: fullCollectionData.id,
-//       name: fullCollectionData.name,
-//       description: fullCollectionData.description,
-//       environment: fullCollectionData.environment,
-//       imageUrl: fullCollectionData.imageUrl,
-//       imported: fullCollectionData.imported,
-//       mintAddress: fullCollectionData.mintAddress,
-//       created: fullCollectionData.created,
-//       contains: fullCollectionData.contains,
-//     });
-//     console.log('Collection details stored in Firestore successfully.');
-
-//     // Respond with success
-//     res.status(200).json({
-//       message: 'Collection created and stored successfully',
-//       gameShiftData: fullCollectionData,
-//     });
-
-//   } catch (error: unknown) {
-//     // Check if the error is an instance of AxiosError or Error
-//     if (axios.isAxiosError(error)) {
-//       console.error('AxiosError during collection creation:', error.message);
-//       res.status(500).send({
-//         message: 'Collection creation failed',
-//         error: error.message,
-//         details: error.response?.data,  // Include additional details if available
-//       });
-//     } else if (error instanceof Error) {
-//       // Handle generic Error instances
-//       console.error('Error during collection creation:', error.message);
-//       res.status(500).send({
-//         message: 'Collection creation failed',
-//         error: error.message,
-//       });
-//     } else {
-//       // Fallback for any non-standard error types (e.g., strings, other objects)
-//       console.error('Unknown error during collection creation:', error);
-//       res.status(500).send({
-//         message: 'An unexpected error occurred',
-//         error: String(error),
-//       });
-//     }
-//   }
-// });
-// Define the Collection interface
 interface Collection {
   id: string;
   name: string;
@@ -942,7 +816,7 @@ app.get('/fetchCollections', async (req, res) => {
 });
 
 
-/* -------------------- Import External Collection and store in 'ii-collections'  ------------------------------ */
+/* -------------------- Import External Collection and store in 'ii-collections'  --------------------------- */
 
 /// Route to import an external asset collection into GameShift
 app.post('/importCollection', async (req, res) => {
@@ -1949,10 +1823,197 @@ app.post('/webhooks/buy-complete', async (req, res) => {
 });
 
 /* -------------------------------------------------------------------------- */
-/*                                Warrior Code                                */
+/*                 Stackable Assets: Artifacts Code                           */
 /* -------------------------------------------------------------------------- */
 
-/* ------------------------------ Mint Warrior ------------------------------ */
+/* ------------------------------ Mint Artifact ------------------------------ */
+
+// This object will hold stackable assets dynamically and can be expanded in the future
+type StackableAssetTypes = 'theracode' | 'therabox' | 'magicalScroll';
+
+const stackableAssets: Record<StackableAssetTypes, {
+  name: string;
+  description: string;
+  imageUrl: string;
+  attributes: {
+    traitType: string;
+    value: string;
+  }[];
+  symbol: string;
+  collectionId: string;
+}> = {
+  theracode: {
+    name: "Test Theracode",
+    description: "Test Gameshift Launch: Mystical book that reveals binaries",
+    imageUrl: "https://bafkreicli7hzoarg4a22ebuu2spjajx6c6f4m7wzoegzhebrn2kw2ur5oa.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'blue' }],
+    symbol: "tcd",
+    collectionId: "3e7b3bdf-47ca-4495-8cdb-cae5f6a64092"
+  },
+  therabox: {
+    name: "Test Thera Box",
+    description: "Test Gameshift Launch: Glowing mini boxes with hidden artifacts",
+    imageUrl: "https://bafkreia4z6j6ghh2q2s7bdhbkiqitrwbivqpqdqftblni2f45xu4vousxu.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'yellow' }],
+    symbol: "tbx",
+    collectionId: "ffce5f8d-d7bc-48be-b429-5d9461d9f721"
+  },
+  magicalScroll: {
+    name: "Test Magical Scroll",
+    description: "Test Gameshift Launch: A partially open magical scroll that contains ancient writing and binaries",
+    imageUrl: "https://bafkreicbengkiedvzbgrtfjbxzwd4udnnbkctqfl5m3hs5a56fdzie7iiu.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'white' }],
+    symbol: "mgs",
+    collectionId: "7a41d736-e48c-405e-b95f-5d725fa216f6"
+  }
+};
+
+// Route to mint a stackable asset dynamically
+app.post('/mintStackableAsset', async (req, res) => {
+  const { assetType }: { assetType: StackableAssetTypes } = req.body;  // assetType must be one of 'theracode', 'therabox', or 'magicalScroll'
+
+  const assetDetails = stackableAssets[assetType];
+
+  if (!assetDetails) {
+    return res.status(400).json({ message: 'Invalid asset type.' });
+  }
+
+  try {
+    const options = {
+      method: 'POST',
+      url: 'https://api.gameshift.dev/nx/stackable-assets',
+      headers: {
+        accept: 'application/json',
+        'content-type': 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,
+      },
+      data: {
+        attributes: assetDetails.attributes,
+        collectionId: assetDetails.collectionId,
+        description: assetDetails.description,
+        name: assetDetails.name,
+        imageUrl: assetDetails.imageUrl,
+        symbol: assetDetails.symbol,
+      }
+    };
+
+    const response = await axios.request(options);
+    res.status(200).json({
+      message: 'Stackable asset minted successfully',
+      data: response.data
+    });
+  } catch (error) {
+    // Check if the error is an instance of the Error class
+    if (error instanceof Error) {
+      console.error('Error minting stackable asset:', error.message);
+      res.status(500).json({ message: 'Failed to mint stackable asset', error: error.message });
+    } else {
+      // Handle unexpected error types (if not an instance of Error)
+      console.error('Unexpected error:', String(error));
+      res.status(500).json({ message: 'Failed to mint stackable asset', error: String(error) });
+    }
+  }
+});
+
+/* ----------------- WEBHOOK: Mint Stackable Asset Check -------------------- */
+app.post('/webhooks/stackableasset-mint-complete', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers for webhook signature verification
+  const webhookId = Array.isArray(req.headers['webhook-id']) ? req.headers['webhook-id'][0] : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) ? req.headers['webhook-timestamp'][0] : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) ? req.headers['webhook-signature'][0] : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract the event data
+  const eventType = req.body?.type;
+  const webhookData = req.body?.data;
+  const assetId = webhookData?.assetId;
+  const collectionId = webhookData?.collectionId;
+
+  if (!collectionId || !assetId) {
+    return res.status(400).json({ message: 'Missing collectionId or assetId' });
+  }
+
+  // Verify webhook signature (reuse existing verifyWebhook function)
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+  if (!isVerified) {
+    console.log('Invalid webhook signature');
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  try {
+    if (eventType === 'stackableAsset.setup.completed') {
+      console.log(`Setup completed for assetId: ${assetId}, collectionId: ${collectionId}`);
+
+      // Fetch the complete asset details from GameShift API using the assetId
+      const gameShiftResponse = await axios.request({
+        method: 'GET',
+        url: `https://api.gameshift.dev/nx/items/${assetId}`,
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY
+        }
+      });
+
+      const assetDetails = gameShiftResponse.data?.item;
+      if (!assetDetails) {
+        throw new Error('Unable to fetch asset details from GameShift');
+      }
+
+      // Update Firestore subcollection with complete asset details
+      const assetDoc = doc(firestore, `ii-collections/${collectionId}/stackable-assets`, assetId);
+      await setDoc(assetDoc, {
+        assetId: assetDetails.id,
+        name: assetDetails.name,
+        description: assetDetails.description,
+        symbol: assetDetails.symbol,
+        status: assetDetails.status || 'Processing',
+        imageUrl: assetDetails.imageUrl,
+        attributes: assetDetails.attributes,
+        mintAddress: assetDetails.mintAddress,
+        timestamp: assetDetails.created,
+        collection: assetDetails.collection,
+      });
+
+      console.log('Stackable asset details stored in Firestore subcollection.');
+      res.status(200).json({ message: 'Asset setup completed and details updated successfully in Firestore' });
+
+    } else if (eventType === 'stackableAsset.setup.initiated') {
+      console.log('Setup initiated event received.');
+      res.status(200).json({ message: 'Setup initiated' });
+    } else if (eventType === 'stackableAsset.setup.failed') {
+      console.log('Setup failed event received.');
+      res.status(200).json({ message: 'Setup failed' });
+    } else {
+      console.log('Unknown event received.');
+      res.status(400).json({ message: 'Unknown event type' });
+    }
+
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).json({ message: error.message });
+    } else {
+      console.error('Unexpected error:', error);
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  }
+});
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                 End Of Stackable Asset Mint Code                           */
+/* -------------------------------------------------------------------------- */
+
 
 // app.post('/warrior', async(req, res) => {
 
