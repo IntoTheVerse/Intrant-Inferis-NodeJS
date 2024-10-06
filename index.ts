@@ -4,7 +4,7 @@ import axios from 'axios';
 import * as crypto from 'crypto';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
-import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc, increment } from 'firebase/firestore';
+import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc, increment, getDoc } from 'firebase/firestore';
 import { setLogLevel } from 'firebase/app';
 setLogLevel('debug');
 
@@ -2076,6 +2076,191 @@ app.post('/webhooks/stackableasset-mint-complete', async (req, res) => {
     }
   }
 });
+
+
+/* ---------------- Issue artefacts to Player in-game collection ------------------------ */
+
+const stackableAssetCollections: {
+  therabox: string;
+  theracode: string;
+  magicalScroll: string;
+} = {
+  therabox: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b',
+  theracode: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e',
+  magicalScroll: '122bc263-6fc8-485a-a11a-8dce7931fb57',
+};
+
+// Type for assetType that matches keys of stackableAssetCollections
+type AssetType = keyof typeof stackableAssetCollections;
+
+// Route to issue stackable asset
+app.post('/issueStackableAsset', async (req, res) => {
+  const { assetType, destinationUserReferenceId } = req.body as {
+    assetType: AssetType;
+    destinationUserReferenceId: string;
+  };
+
+  if (!stackableAssetCollections[assetType]) {
+    return res.status(400).json({ message: 'Invalid asset type.' });
+  }
+
+  try {
+    const options = {
+      method: 'POST',
+      url: `https://api.gameshift.dev/nx/stackable-assets/${stackableAssetCollections[assetType]}`,
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,
+        'content-type': 'application/json',
+      },
+      data: {
+        amount: 1,
+        destinationUserReferenceId,
+      },
+    };
+
+    const response = await axios.request(options);
+    res.status(200).json({
+      message: 'Stackable asset issue initiated',
+      data: response.data,
+    });
+  } catch (error: unknown) {
+    // Handle axios errors with proper type check
+    if (axios.isAxiosError(error)) {
+      // If the error has a response, log and return it
+      if (error.response) {
+        console.error('Error issuing stackable asset:', error.response.data);
+        return res.status(500).json({ message: 'Failed to issue stackable asset', error: error.response.data });
+      }
+      // Handle other axios-specific errors
+      console.error('Error issuing stackable asset:', error.message);
+      return res.status(500).json({ message: 'Failed to issue stackable asset', error: error.message });
+    }
+    // Handle unknown errors
+    console.error('Unexpected error:', error);
+    res.status(500).json({ message: 'An unexpected error occurred', error: String(error) });
+  }
+});
+
+
+/* ----------------------- WEBHOOK: Verify artefact mint ----------------------------- */
+
+app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers and ensure they are strings
+  const webhookId = Array.isArray(req.headers['webhook-id']) ? req.headers['webhook-id'][0] : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) ? req.headers['webhook-timestamp'][0] : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) ? req.headers['webhook-signature'][0] : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract event data from the webhook payload
+  const eventType = req.body?.type;
+  const webhookData = req.body?.data;
+
+  try {
+    // Handle stackableAsset.issue.completed event
+    if (eventType === 'stackableAsset.issue.completed') {
+      // Extract wallet address from the payload
+      const destinationUserWalletAddress = webhookData?.details?.data?.recipient?.walletAddress;
+
+      if (!destinationUserWalletAddress) {
+        return res.status(400).json({ message: 'Missing wallet address from recipient.' });
+      }
+
+      // Fetch the user reference ID using the wallet address
+      const userReferenceResponse = await axios.request({
+        method: 'GET',
+        url: `https://api.gameshift.dev/nx/users/wallet/${destinationUserWalletAddress}`,
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      });
+
+      const destinationUserReferenceId = userReferenceResponse.data?.referenceId;
+
+      if (!destinationUserReferenceId) {
+        return res.status(400).json({ message: 'Failed to fetch destinationUserReferenceId.' });
+      }
+
+      const assetId = webhookData?.assetId;  // Extracted from "data.assetId"
+      if (!assetId) {
+        return res.status(400).json({ message: 'Missing assetId from the webhook data.' });
+      }
+
+      // Verify the webhook signature
+      const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+      if (!isVerified) {
+        console.log('Invalid webhook signature');
+        return res.status(403).json({ message: 'Invalid webhook signature' });
+      }
+
+      // Asset issue completed: update Firestore
+      console.log(`Asset issue completed for assetId: ${assetId}, userId: ${destinationUserReferenceId}`);
+
+      const userDocRef = doc(firestore, 'users', destinationUserReferenceId, 'assets', assetId);
+
+      // Retrieve the current document to check if it already exists
+      const assetDoc = await getDoc(userDocRef);
+
+      if (assetDoc.exists()) {
+        // If the asset already exists, increment the quantity
+        await updateDoc(userDocRef, {
+          quantity: increment(1), // Increment the quantity by 1
+          lastUpdated: new Date().getTime(), // Optionally track when it was last updated
+        });
+      } else {
+        // If the asset doesn't exist, create it with quantity 1
+        await setDoc(userDocRef, {
+          assetId,
+          status: 'Owned',
+          timestamp: new Date().getTime(),
+          quantity: 1, // Set initial quantity to 1
+          ...webhookData.details.data, // Add additional asset details if needed
+        });
+      }
+
+      console.log('Stackable asset added or updated in user\'s Firestore document.');
+      return res.status(200).json({ message: 'Asset added or updated in user\'s Firestore document successfully' });
+
+    } else if (eventType === 'stackableAsset.issue.failed') {
+      console.error('Stackable asset issue failed');
+      return res.status(500).json({ message: 'Asset issue failed' });
+
+    } else if (eventType === 'stackableAsset.issue.initiated') {
+      console.log('Stackable asset issue initiated');
+      return res.status(200).json({ message: 'Asset issue initiated' });
+
+    } else {
+      console.error('Unknown event type');
+      return res.status(400).json({ message: 'Unknown event type' });
+    }
+
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error('Error handling webhook:', error.message);
+      return res.status(500).json({ message: 'Failed to handle webhook', error: error.message });
+    } else {
+      console.error('Unexpected error:', error);
+      return res.status(500).json({ message: 'An unexpected error occurred', error: String(error) });
+    }
+  }
+});
+
+
+
+
+
+
+
 
 
 
