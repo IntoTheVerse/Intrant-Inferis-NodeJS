@@ -577,25 +577,16 @@ app.post('/changePassword', async (req, res) => {
 /* -------------------------------------------------------------------------- */
 
 /* ---------------------------- Mint Collection------------------------------ */
-
-// Route to create a new collection in GameShift
 app.post('/createCollection', async (req, res) => {
   const { name, description, imageUrl, contains } = req.body;
 
   try {
-    // Log incoming request
     console.log('Create Collection API hit. Request Body:', { name, description, imageUrl, contains });
 
     // Step 1: Create the collection with GameShift
-    console.log('Creating collection with GameShift...');
     const gameShiftResponse = await axios.post(
       'https://api.gameshift.dev/nx/asset-collections',
-      {
-        name,
-        description,
-        imageUrl,
-        contains,
-      },
+      { name, description, imageUrl, contains },
       {
         headers: {
           accept: 'application/json',
@@ -608,65 +599,26 @@ app.post('/createCollection', async (req, res) => {
     const collectionId = gameShiftResponse.data.id;
     console.log(`Collection created. ID: ${collectionId}`);
 
-    // Step 2: Introduce a delay of 5 seconds before fetching the full collection details
-    console.log('Waiting for 5 seconds to allow mintAddress to be confirmed...');
-    await new Promise(resolve => setTimeout(resolve, 20000)); // 20-second delay
-
-    // Step 3: Fetch the full collection details including the mintAddress
-    console.log(`Fetching collection details for ID: ${collectionId} to retrieve mintAddress...`);
-    const collectionDetailsResponse = await axios.get(
-      `https://api.gameshift.dev/nx/asset-collections/${collectionId}?includeStats=false`,
-      {
-        headers: {
-          accept: 'application/json',
-          'x-api-key': process.env.GAMESHIFT_API_KEY,
-        },
-      }
-    );
-
-    const fullCollectionData = collectionDetailsResponse.data;
-    console.log('Full collection details retrieved:', fullCollectionData);
-
-    // Step 4: Store the collection details in Firestore, including the mintAddress
-    console.log('Storing collection details in Firestore...');
-    const collectionDoc = doc(firestore, 'ii-collections', collectionId);
-    await setDoc(collectionDoc, {
-      id: fullCollectionData.id,
-      name: fullCollectionData.name,
-      description: fullCollectionData.description,
-      environment: fullCollectionData.environment,
-      imageUrl: fullCollectionData.imageUrl,
-      imported: fullCollectionData.imported,
-      mintAddress: fullCollectionData.mintAddress,
-      created: fullCollectionData.created,
-      contains: fullCollectionData.contains,
-    });
-    console.log('Collection details stored in Firestore successfully.');
-
-    // Respond with success
     res.status(200).json({
-      message: 'Collection created and stored successfully',
-      gameShiftData: fullCollectionData,
+      message: 'Collection created successfully. Waiting for minting completion.',
+      collectionId,
     });
 
-  } catch (error: unknown) {
-    // Check if the error is an instance of AxiosError or Error
+  } catch (error) {
     if (axios.isAxiosError(error)) {
       console.error('AxiosError during collection creation:', error.message);
       res.status(500).send({
         message: 'Collection creation failed',
         error: error.message,
-        details: error.response?.data,  // Include additional details if available
+        details: error.response?.data,
       });
     } else if (error instanceof Error) {
-      // Handle generic Error instances
       console.error('Error during collection creation:', error.message);
       res.status(500).send({
         message: 'Collection creation failed',
         error: error.message,
       });
     } else {
-      // Fallback for any non-standard error types (e.g., strings, other objects)
       console.error('Unknown error during collection creation:', error);
       res.status(500).send({
         message: 'An unexpected error occurred',
@@ -675,6 +627,231 @@ app.post('/createCollection', async (req, res) => {
     }
   }
 });
+
+/* ---------------------------- WEBHOOK: Collection Mint Completed ------------------------------ */
+app.post('/webhooks/collection-mint-completed', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers for webhook signature verification
+  const webhookId = Array.isArray(req.headers['webhook-id']) 
+    ? req.headers['webhook-id'][0] 
+    : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) 
+    ? req.headers['webhook-timestamp'][0] 
+    : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) 
+    ? req.headers['webhook-signature'][0] 
+    : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract the event data
+  const webhookData = req.body?.data;
+  const eventType = req.body?.type;
+  const collectionId = webhookData?.collectionId;
+  const status = webhookData?.status;
+
+  // Verify the webhook signature
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, webhookData, webhookSecret);
+  if (!isVerified) {
+    console.log('Invalid webhook signature');
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  if (!collectionId) {
+    return res.status(400).json({ message: 'Missing collectionId' });
+  }
+
+  try {
+    // Proceed only if the event status is 'completed'
+    if (status === 'completed') {
+      const apiUrl = `https://api.gameshift.dev/nx/asset-collections/${collectionId}?includeStats=false`;
+      const apiOptions = {
+        method: 'GET',
+        url: apiUrl,
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      };
+
+      const apiResponse = await axios.request(apiOptions);
+      const collectionDetails = apiResponse.data;
+
+      if (!collectionDetails || !collectionDetails.id) {
+        throw new Error('Unable to fetch collection details from GameShift');
+      }
+
+      console.log('Collection details retrieved:', collectionDetails);
+
+      // Store collection details in Firestore using the collectionId as document ID under ii-collections
+      const collectionDoc = doc(firestore, 'ii-collections', collectionId);
+
+      await setDoc(collectionDoc, {
+        id: collectionDetails.id,
+        name: collectionDetails.name,
+        description: collectionDetails.description,
+        environment: collectionDetails.environment,
+        imageUrl: collectionDetails.imageUrl,
+        imported: collectionDetails.imported,
+        mintAddress: collectionDetails.mintAddress,
+        created: collectionDetails.created,
+        contains: collectionDetails.contains,
+      });
+
+      console.log('Collection details stored in Firestore successfully.');
+
+      res.status(200).json({
+        message: 'Collection mint completed and details stored successfully',
+      });
+    } else {
+      // Handle other event statuses (like initiated or failed)
+      res.status(200).json({ message: `Event received: ${status}` });
+    }
+
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error('Error:', error.message);
+      res.status(500).json({ message: error.message });
+    } else {
+      console.error('Unexpected error:', error);
+      res.status(500).json({ message: 'An unexpected error occurred' });
+    }
+  }
+});
+
+// Webhook Verification Function
+// function verifyWebhook(
+//   webhookId: string,
+//   webhookTimestamp: string,
+//   webhookSignature: string,
+//   webhookData: object,
+//   secretKey: string
+// ): boolean {
+//   const webhookDataStr = JSON.stringify(webhookData);  // Stringify the webhook data
+//   const signedContent = `${webhookId}.${webhookTimestamp}.${webhookDataStr}`;  // Concatenate signature components
+//   const secretBytes = Buffer.from(secretKey, 'base64');  // Convert secret key to bytes
+//   const expectedSignature = crypto
+//     .createHmac('sha256', secretBytes)
+//     .update(signedContent)
+//     .digest('base64');
+
+//   console.log("Webhook Timestamp:", webhookTimestamp);
+//   console.log("Webhook Signature:", webhookSignature);
+//   console.log("Generated Signature:", `v1,${expectedSignature}`);
+//   console.log("Webhook Data String:", webhookDataStr);
+
+//   return `v1,${expectedSignature}` === webhookSignature;
+// }
+
+
+
+
+
+
+// // Route to create a new collection in GameShift
+// app.post('/createCollection', async (req, res) => {
+//   const { name, description, imageUrl, contains } = req.body;
+
+//   try {
+//     // Log incoming request
+//     console.log('Create Collection API hit. Request Body:', { name, description, imageUrl, contains });
+
+//     // Step 1: Create the collection with GameShift
+//     console.log('Creating collection with GameShift...');
+//     const gameShiftResponse = await axios.post(
+//       'https://api.gameshift.dev/nx/asset-collections',
+//       {
+//         name,
+//         description,
+//         imageUrl,
+//         contains,
+//       },
+//       {
+//         headers: {
+//           accept: 'application/json',
+//           'content-type': 'application/json',
+//           'x-api-key': process.env.GAMESHIFT_API_KEY,
+//         },
+//       }
+//     );
+
+//     const collectionId = gameShiftResponse.data.id;
+//     console.log(`Collection created. ID: ${collectionId}`);
+
+//     // Step 2: Introduce a delay of 5 seconds before fetching the full collection details
+//     console.log('Waiting for 5 seconds to allow mintAddress to be confirmed...');
+//     await new Promise(resolve => setTimeout(resolve, 20000)); // 20-second delay
+
+//     // Step 3: Fetch the full collection details including the mintAddress
+//     console.log(`Fetching collection details for ID: ${collectionId} to retrieve mintAddress...`);
+//     const collectionDetailsResponse = await axios.get(
+//       `https://api.gameshift.dev/nx/asset-collections/${collectionId}?includeStats=false`,
+//       {
+//         headers: {
+//           accept: 'application/json',
+//           'x-api-key': process.env.GAMESHIFT_API_KEY,
+//         },
+//       }
+//     );
+
+//     const fullCollectionData = collectionDetailsResponse.data;
+//     console.log('Full collection details retrieved:', fullCollectionData);
+
+//     // Step 4: Store the collection details in Firestore, including the mintAddress
+//     console.log('Storing collection details in Firestore...');
+//     const collectionDoc = doc(firestore, 'ii-collections', collectionId);
+//     await setDoc(collectionDoc, {
+//       id: fullCollectionData.id,
+//       name: fullCollectionData.name,
+//       description: fullCollectionData.description,
+//       environment: fullCollectionData.environment,
+//       imageUrl: fullCollectionData.imageUrl,
+//       imported: fullCollectionData.imported,
+//       mintAddress: fullCollectionData.mintAddress,
+//       created: fullCollectionData.created,
+//       contains: fullCollectionData.contains,
+//     });
+//     console.log('Collection details stored in Firestore successfully.');
+
+//     // Respond with success
+//     res.status(200).json({
+//       message: 'Collection created and stored successfully',
+//       gameShiftData: fullCollectionData,
+//     });
+
+//   } catch (error: unknown) {
+//     // Check if the error is an instance of AxiosError or Error
+//     if (axios.isAxiosError(error)) {
+//       console.error('AxiosError during collection creation:', error.message);
+//       res.status(500).send({
+//         message: 'Collection creation failed',
+//         error: error.message,
+//         details: error.response?.data,  // Include additional details if available
+//       });
+//     } else if (error instanceof Error) {
+//       // Handle generic Error instances
+//       console.error('Error during collection creation:', error.message);
+//       res.status(500).send({
+//         message: 'Collection creation failed',
+//         error: error.message,
+//       });
+//     } else {
+//       // Fallback for any non-standard error types (e.g., strings, other objects)
+//       console.error('Unknown error during collection creation:', error);
+//       res.status(500).send({
+//         message: 'An unexpected error occurred',
+//         error: String(error),
+//       });
+//     }
+//   }
+// });
 // Define the Collection interface
 interface Collection {
   id: string;
