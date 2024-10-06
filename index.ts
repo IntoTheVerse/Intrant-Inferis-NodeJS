@@ -4,7 +4,7 @@ import axios from 'axios';
 import * as crypto from 'crypto';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
-import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc, increment } from 'firebase/firestore';
 import { setLogLevel } from 'firebase/app';
 setLogLevel('debug');
 
@@ -1829,7 +1829,8 @@ app.post('/webhooks/buy-complete', async (req, res) => {
 /* ------------------------------ Mint Artifact ------------------------------ */
 
 // This object will hold stackable assets dynamically and can be expanded in the future
-type StackableAssetTypes = 'theracode' | 'therabox' | 'magicalScroll';
+// Expanded StackableAssetTypes to include all asset types
+type StackableAssetTypes = 'theracode' | 'therabox' | 'magicalScroll' | 'fixerElixir' | 'quarterRevivalElixir' | 'halfRevivalElixir' | 'plus15Powerup' | 'plus20Powerup';
 
 const stackableAssets: Record<StackableAssetTypes, {
   name: string;
@@ -1843,39 +1844,93 @@ const stackableAssets: Record<StackableAssetTypes, {
   collectionId: string;
 }> = {
   theracode: {
-    name: "Test Theracode",
-    description: "Test Gameshift Launch: Mystical book that reveals binaries",
+    name: "Theracode",
+    description: "Mystical book revealing binary secrets",
     imageUrl: "https://bafkreicli7hzoarg4a22ebuu2spjajx6c6f4m7wzoegzhebrn2kw2ur5oa.ipfs.nftstorage.link/",
     attributes: [{ traitType: 'color', value: 'blue' }],
     symbol: "tcd",
     collectionId: "3e7b3bdf-47ca-4495-8cdb-cae5f6a64092"
   },
   therabox: {
-    name: "Test Thera Box",
-    description: "Test Gameshift Launch: Glowing mini boxes with hidden artifacts",
+    name: "Thera Box",
+    description: "Glowing box with hidden artifacts",
     imageUrl: "https://bafkreia4z6j6ghh2q2s7bdhbkiqitrwbivqpqdqftblni2f45xu4vousxu.ipfs.nftstorage.link/",
     attributes: [{ traitType: 'color', value: 'yellow' }],
     symbol: "tbx",
     collectionId: "ffce5f8d-d7bc-48be-b429-5d9461d9f721"
   },
   magicalScroll: {
-    name: "Test Magical Scroll",
-    description: "Test Gameshift Launch: A partially open magical scroll that contains ancient writing and binaries",
+    name: "Magical Scroll",
+    description: "Partially open scroll with ancient writings",
     imageUrl: "https://bafkreicbengkiedvzbgrtfjbxzwd4udnnbkctqfl5m3hs5a56fdzie7iiu.ipfs.nftstorage.link/",
     attributes: [{ traitType: 'color', value: 'white' }],
     symbol: "mgs",
     collectionId: "7a41d736-e48c-405e-b95f-5d725fa216f6"
+  },
+  fixerElixir: {
+    name: "Fixer Elixir",
+    description: "Restores full stamina/health temporarily",
+    imageUrl: "https://bafkreietd6olqr2ci2dc7si4vy6hf6pv7hyxsiq46rk32xpkuzzbbrwy7e.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'Purple' }],
+    symbol: "fixr",
+    collectionId: "ceacdc47-5a6c-4711-8225-70d87ee896ba"
+  },
+  quarterRevivalElixir: {
+    name: "Quarter Rev Elixir",
+    description: "Restores quarter stamina/health temporarily",
+    imageUrl: "https://bafkreidvep3viw3nqqkqb5k2o2ywzkau2boyslujr63pj5gcbap6s37jeq.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'Green' }],
+    symbol: "qrev",
+    collectionId: "05083879-1002-44af-94b9-203980a02de1"
+  },
+  halfRevivalElixir: {
+    name: "Half Rev Elixir",
+    description: "Restores half stamina/health temporarily",
+    imageUrl: "https://bafkreideyeu5onx4oq5b2o4vzf7wuuk3ugfqynblqdyk4haf4q4uqxlw74.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'Red' }],
+    symbol: "hrev",
+    collectionId: "ee0fe50f-ff6e-441f-a2af-1cc9c685aa30"
+  },
+  plus15Powerup: {
+    name: "Plus 15 Powerup",
+    description: "Boost STM/HP by +15 units, permanent",
+    imageUrl: "https://bafkreicp7qmmf2c5iyftsxhzf34vz3qllbr3k3xdwgxvsbnlbgokm5i3gy.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'Cyan' }],
+    symbol: "p15p",
+    collectionId: "ace2eb6b-6cbd-4f22-a00e-1dbf9e7a7a97"
+  },
+  plus20Powerup: {
+    name: "Plus 20 Powerup",
+    description: "Boost STM/HP by +20 units, permanent",
+    imageUrl: "https://bafkreihytm5tseo52ff3xzhcggbzfhzvns5wfteppubufzfltuov5pnv3q.ipfs.nftstorage.link/",
+    attributes: [{ traitType: 'color', value: 'Pink' }],
+    symbol: "p20p",
+    collectionId: "0dbd7713-b24a-4458-b6c7-bd5fc321d010"
   }
 };
 
 // Route to mint a stackable asset dynamically
+// Route to mint a stackable asset dynamically
 app.post('/mintStackableAsset', async (req, res) => {
-  const { assetType }: { assetType: StackableAssetTypes } = req.body;  // assetType must be one of 'theracode', 'therabox', or 'magicalScroll'
+  const { assetType }: { assetType: StackableAssetTypes } = req.body;
 
   const assetDetails = stackableAssets[assetType];
 
   if (!assetDetails) {
     return res.status(400).json({ message: 'Invalid asset type.' });
+  }
+
+  // Ensure that the description, name, and symbol meet the API requirements
+  if (assetDetails.description.length > 64) {
+    return res.status(400).json({ message: 'Description exceeds 64 characters.' });
+  }
+
+  if (assetDetails.name.length > 32) {
+    return res.status(400).json({ message: 'Name exceeds 32 characters.' });
+  }
+
+  if (assetDetails.symbol.length > 5) {
+    return res.status(400).json({ message: 'Symbol exceeds 5 characters.' });
   }
 
   try {
@@ -1897,23 +1952,37 @@ app.post('/mintStackableAsset', async (req, res) => {
       }
     };
 
+    console.log('Sending request to GameShift with data:', options.data);
+
     const response = await axios.request(options);
+    console.log('GameShift response:', response.data);
+
     res.status(200).json({
       message: 'Stackable asset minted successfully',
       data: response.data
     });
+
   } catch (error) {
-    // Check if the error is an instance of the Error class
-    if (error instanceof Error) {
+    if (axios.isAxiosError(error)) {
+      console.error('Error minting stackable asset:', error.message);
+      console.error('Response data:', error.response?.data);
+
+      res.status(500).json({
+        message: 'Failed to mint stackable asset',
+        error: error.message,
+        details: error.response?.data || 'No additional details'
+      });
+    } else if (error instanceof Error) {
       console.error('Error minting stackable asset:', error.message);
       res.status(500).json({ message: 'Failed to mint stackable asset', error: error.message });
     } else {
-      // Handle unexpected error types (if not an instance of Error)
       console.error('Unexpected error:', String(error));
       res.status(500).json({ message: 'Failed to mint stackable asset', error: String(error) });
     }
   }
 });
+
+
 
 /* ----------------- WEBHOOK: Mint Stackable Asset Check -------------------- */
 app.post('/webhooks/stackableasset-mint-complete', async (req, res) => {
