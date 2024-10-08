@@ -2255,18 +2255,176 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
 /* -------------------------------------------------------------------------- */
 /*                 End Of Stackable Asset Mint Code                           */
 /* -------------------------------------------------------------------------- */
+
+
+/* -------------------------------------------------------------------------- */
+/*                 Crafting Module for Potions and Powerups                   */
+/* -------------------------------------------------------------------------- */
+
+
+// Define the types for crafting recipes
+type itemType = 'fixerElixir' | 'quarterRevivalElixir' | 'halfRevivalElixir' | 'plus15Powerup' | 'plus20Powerup';
+
+const craftingRecipes: Record<itemType, {
+  metadata: {
+    completionMessage: {
+      primary: string;
+      secondary: string;
+    };
+    attributes: {
+      traitType: string;
+      value: string;
+    }[];
+    title: string;
+    description: string;
+    image: string;
+  };
+  // craftingUserReferenceId: string;
+  consumes: {
+    id: string;
+    naturalAmount: string;
+    type: 'Currency' | 'StackableAsset';
+  }[];
+}> = {
+  fixerElixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Fixer Elixir',
+        secondary: 'You can now access it in your inventory and use in-game to revive your warrior to full capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Purple' }],
+      title: 'Fixer Elixir',
+      description: 'Restores full stamina/health temporarily',
+      image: 'https://bafkreietd6olqr2ci2dc7si4vy6hf6pv7hyxsiq46rk32xpkuzzbbrwy7e.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.005', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '2', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '2', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '2', type: 'StackableAsset' }
+    ]
+  },
+  quarterRevivalElixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Quarter Revival Elixir',
+        secondary: 'You can now access it in your inventory and use it to upgrade your warrior to quarter health capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Green' }],
+      title: 'Quarter Rev Elixir',
+      description: 'Restores quarter stamina/health temporarily',
+      image: 'https://bafkreidvep3viw3nqqkqb5k2o2ywzkau2boyslujr63pj5gcbap6s37jeq.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.00125', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '1', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '1', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '1', type: 'StackableAsset' }
+    ]
+  },
+  halfRevivalElixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Half Revival Elixir',
+        secondary: 'You can now access it in your inventory and use it to revive your warrior to half its health capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Red' }],
+      title: 'Half Rev Elixir',
+      description: 'Restores half stamina/health temporarily',
+      image: 'https://bafkreideyeu5onx4oq5b2o4vzf7wuuk3ugfqynblqdyk4haf4q4uqxlw74.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.0025', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '1', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '2', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '1', type: 'StackableAsset' }
+    ]
+  },
+  plus15Powerup: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Plus 15 Powerup',
+        secondary: 'You can now access it in your inventory, and use it to enhance player attributes by +15'
+      },
+      attributes: [{ traitType: 'color', value: 'Cyan' }],
+      title: 'Plus 15 Powerup',
+      description: 'Boost STM/HP by +15 units, permanent',
+      image: 'https://bafkreicp7qmmf2c5iyftsxhzf34vz3qllbr3k3xdwgxvsbnlbgokm5i3gy.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.01', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '3', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '3', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '3', type: 'StackableAsset' }
+    ]
+  },
+  plus20Powerup: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Plus 20 Powerup',
+        secondary: 'You can now access it in your inventory, and use it to enhance player attributes by +20'
+      },
+      attributes: [{ traitType: 'color', value: 'Pink' }],
+      title: 'Plus 20 Powerup',
+      description: 'Boost STM/HP by +20 units, permanent',
+      image: 'https://bafkreihytm5tseo52ff3xzhcggbzfhzvns5wfteppubufzfltuov5pnv3q.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.02', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '4', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '4', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '4', type: 'StackableAsset' }
+    ]
+  }
+};
+
+// Route to craft potions/powerups
+app.post('/craftItem', async (req, res) => {
+  const { itemType, craftingUserReferenceId } = req.body as {
+    itemType: itemType;
+    craftingUserReferenceId: string;
+  };
+
+  const craftingData = craftingRecipes[itemType];
+
+  if (!craftingData) {
+    return res.status(400).json({ message: 'Invalid potion type' });
+  }
+
+  try {
+    const response = await axios.post('https://api.gameshift.dev/nx/crafting-recipes', {
+      ...craftingData,
+      craftingUserReferenceId
+    }, {
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,
+        'content-type': 'application/json'
+      }
+    });
+
+    res.status(200).json({
+      message: 'Crafting request successful',
+      data: response.data
+    });
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      console.error(error.response?.data || error.message);
+      res.status(500).json({ message: 'Crafting request failed', error: error.response?.data || error.message });
+    } else {
+      console.error('Unexpected error:', String(error));
+      res.status(500).json({ message: 'An unexpected error occurred', error: String(error) });
+    }
+  }
+});
 
 
 // app.post('/warrior', async(req, res) => {
