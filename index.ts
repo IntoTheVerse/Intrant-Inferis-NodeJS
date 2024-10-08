@@ -2167,7 +2167,6 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
   const webhookData = req.body?.data;
 
   try {
-    // Handle stackableAsset.issue.completed event
     if (eventType === 'stackableAsset.issue.completed') {
       // Extract wallet address from the payload
       const destinationUserWalletAddress = webhookData?.details?.data?.recipient?.walletAddress;
@@ -2192,7 +2191,7 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
         return res.status(400).json({ message: 'Failed to fetch destinationUserReferenceId.' });
       }
 
-      const assetId = webhookData?.assetId;  // Extracted from "data.assetId"
+      const assetId = webhookData?.assetId;
       if (!assetId) {
         return res.status(400).json({ message: 'Missing assetId from the webhook data.' });
       }
@@ -2204,10 +2203,20 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
         return res.status(403).json({ message: 'Invalid webhook signature' });
       }
 
-      // Asset issue completed: update Firestore
-      console.log(`Asset issue completed for assetId: ${assetId}, userId: ${destinationUserReferenceId}`);
+      // Fetch additional asset data from the external API
+      const assetResponse = await axios.request({
+        method: 'GET',
+        url: `https://api.gameshift.dev/nx/items/${assetId}`,  // Fetching asset data using assetId
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+        },
+      });
 
-      const userDocRef = doc(firestore, 'users', destinationUserReferenceId, 'assets', assetId);
+      const assetData = assetResponse.data;
+
+      // Now save this asset to the 'stackable-assets' sub-collection in Firestore
+      const userDocRef = doc(firestore, 'users', destinationUserReferenceId, 'stackable-assets', assetId);  // Saving to 'stackable-assets'
 
       // Retrieve the current document to check if it already exists
       const assetDoc = await getDoc(userDocRef);
@@ -2215,8 +2224,8 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
       if (assetDoc.exists()) {
         // If the asset already exists, increment the quantity
         await updateDoc(userDocRef, {
-          quantity: increment(1), // Increment the quantity by 1
-          lastUpdated: new Date().getTime(), // Optionally track when it was last updated
+          quantity: increment(1),  // Increment the quantity by 1
+          lastUpdated: new Date().getTime(),  // Optionally track when it was last updated
         });
       } else {
         // If the asset doesn't exist, create it with quantity 1
@@ -2224,13 +2233,13 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
           assetId,
           status: 'Owned',
           timestamp: new Date().getTime(),
-          quantity: 1, // Set initial quantity to 1
-          ...webhookData.details.data, // Add additional asset details if needed
+          quantity: 1,  // Set initial quantity to 1
+          ...assetData,  // Save additional asset data from the GET request
         });
       }
 
       console.log('Stackable asset added or updated in user\'s Firestore document.');
-      return res.status(200).json({ message: 'Asset added or updated in user\'s Firestore document successfully' });
+      return res.status(200).json({ message: 'Stackable asset added or updated in user\'s Firestore document successfully' });
 
     } else if (eventType === 'stackableAsset.issue.failed') {
       console.error('Stackable asset issue failed');
@@ -2238,14 +2247,14 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
 
     } else if (eventType === 'stackableAsset.issue.initiated') {
       console.log('Stackable asset issue initiated');
-      return res.status(200).json({ message: 'Asset issue initiated' });
+      return res.status(200).json({ message: 'Stackable asset issue initiated' });
 
     } else {
       console.error('Unknown event type');
       return res.status(400).json({ message: 'Unknown event type' });
     }
 
-  } catch (error: unknown) {
+  } catch (error) {
     if (error instanceof Error) {
       console.error('Error handling webhook:', error.message);
       return res.status(500).json({ message: 'Failed to handle webhook', error: error.message });
@@ -2255,6 +2264,7 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
     }
   }
 });
+
 
 /* -------------------------------------------------------------------------- */
 /*                 End Of Stackable Asset Mint Code                           */
