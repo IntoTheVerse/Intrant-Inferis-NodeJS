@@ -1,6 +1,7 @@
 import * as express from 'express';
 import * as dotenv from "dotenv";
 import axios from 'axios';
+import { Request, Response } from 'express';
 import * as crypto from 'crypto';
 import { auth, firestore } from './config/firebaseConfig';
 import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
@@ -2255,18 +2256,280 @@ app.post('/webhooks/issue-artefacts-completed', async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
 /* -------------------------------------------------------------------------- */
 /*                 End Of Stackable Asset Mint Code                           */
 /* -------------------------------------------------------------------------- */
+
+
+/* -------------------------------------------------------------------------- */
+/*                 Crafting Module for Potions and Powerups                   */
+/* -------------------------------------------------------------------------- */
+
+
+// Define the types for crafting recipes
+type itemType = 'fixerelixir' | 'quarterrevelixir' | 'halfrevelixir' | 'plus15powerup' | 'plus20powerup';
+
+const craftingRecipes: Record<itemType, {
+  metadata: {
+    completionMessage: {
+      primary: string;
+      secondary: string;
+    };
+    attributes: {
+      traitType: string;
+      value: string;
+    }[];
+    title: string;
+    description: string;
+    image: string;
+  };
+  // craftingUserReferenceId: string;
+  consumes: {
+    id: string;
+    naturalAmount: string;
+    type: 'Currency' | 'StackableAsset';
+  }[];
+}> = {
+  fixerelixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Fixer Elixir',
+        secondary: 'You can now access it in your inventory and use in-game to revive your warrior to full capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Purple' }],
+      title: 'Fixer Elixir',
+      description: 'Restores full stamina/health temporarily',
+      image: 'https://bafkreietd6olqr2ci2dc7si4vy6hf6pv7hyxsiq46rk32xpkuzzbbrwy7e.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.005', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '2', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '2', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '2', type: 'StackableAsset' }
+    ]
+  },
+  quarterrevelixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Quarter Revival Elixir',
+        secondary: 'You can now access it in your inventory and use it to upgrade your warrior to quarter health capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Green' }],
+      title: 'Quarter Rev Elixir',
+      description: 'Restores quarter stamina/health temporarily',
+      image: 'https://bafkreidvep3viw3nqqkqb5k2o2ywzkau2boyslujr63pj5gcbap6s37jeq.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.00125', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '1', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '1', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '1', type: 'StackableAsset' }
+    ]
+  },
+  halfrevelixir: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Half Revival Elixir',
+        secondary: 'You can now access it in your inventory and use it to revive your warrior to half its health capacity'
+      },
+      attributes: [{ traitType: 'color', value: 'Red' }],
+      title: 'Half Rev Elixir',
+      description: 'Restores half stamina/health temporarily',
+      image: 'https://bafkreideyeu5onx4oq5b2o4vzf7wuuk3ugfqynblqdyk4haf4q4uqxlw74.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.0025', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '1', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '2', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '1', type: 'StackableAsset' }
+    ]
+  },
+  plus15powerup: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Plus 15 Powerup',
+        secondary: 'You can now access it in your inventory, and use it to enhance player attributes by +15'
+      },
+      attributes: [{ traitType: 'color', value: 'Cyan' }],
+      title: 'Plus 15 Powerup',
+      description: 'Boost STM/HP by +15 units, permanent',
+      image: 'https://bafkreicp7qmmf2c5iyftsxhzf34vz3qllbr3k3xdwgxvsbnlbgokm5i3gy.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.01', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '3', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '3', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '3', type: 'StackableAsset' }
+    ]
+  },
+  plus20powerup: {
+    metadata: {
+      completionMessage: {
+        primary: 'Successfully brewed Plus 20 Powerup',
+        secondary: 'You can now access it in your inventory, and use it to enhance player attributes by +20'
+      },
+      attributes: [{ traitType: 'color', value: 'Pink' }],
+      title: 'Plus 20 Powerup',
+      description: 'Boost STM/HP by +20 units, permanent',
+      image: 'https://bafkreihytm5tseo52ff3xzhcggbzfhzvns5wfteppubufzfltuov5pnv3q.ipfs.nftstorage.link/'
+    },
+    // craftingUserReferenceId: 'fjUdNjfASihUAkwTpVsGwrNOJCF3',
+    consumes: [
+      { id: 'SOL', naturalAmount: '0.02', type: 'Currency' },
+      { id: 'df9d328b-1e59-4fa7-8650-8afb6f11cc9b', naturalAmount: '4', type: 'StackableAsset' },
+      { id: 'e40dde00-b894-4cd9-bd93-ad26fdf7425e', naturalAmount: '4', type: 'StackableAsset' },
+      { id: '122bc263-6fc8-485a-a11a-8dce7931fb57', naturalAmount: '4', type: 'StackableAsset' }
+    ]
+  }
+};
+
+// Route to craft potions/powerups
+app.post('/craftItem', async (req, res) => {
+  const { itemType, craftingUserReferenceId } = req.body as {
+    itemType: itemType;
+    craftingUserReferenceId: string;
+  };
+
+  const craftingData = craftingRecipes[itemType];
+
+  if (!craftingData) {
+    return res.status(400).json({ message: 'Invalid potion type' });
+  }
+
+  try {
+    const response = await axios.post('https://api.gameshift.dev/nx/crafting-recipes', {
+      ...craftingData,
+      craftingUserReferenceId,
+    }, {
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY,
+        'content-type': 'application/json'
+      }
+    });
+
+    // Store the craftingRecipeId and consent URL for tracking
+    const { craftingRecipeId, consentUrl } = response.data;
+
+    // Return the consent URL to the client
+    res.status(200).json({
+      message: 'Crafting request successful',
+      data: response.data
+    });
+
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      console.error(error.response?.data || error.message);
+      res.status(500).json({ message: 'Crafting request failed', error: error.response?.data || error.message });
+    } else {
+      console.error('Unexpected error:', String(error));
+      res.status(500).json({ message: 'An unexpected error occurred', error: String(error) });
+    }
+  }
+});
+
+
+/* -------------- WEBHOOK : Track crafting recipe completing status and issue item to destination user --------- */
+type WebhookData = {
+  data: {
+    status: string;
+    recipe: {
+      id: string;
+      metadata: {
+        title: string;
+      };
+      craftingUserReferenceId: string;
+    };
+  };
+};
+
+app.post('/webhooks/crafting-recipe-complete', async (req: Request, res: Response) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract and validate headers
+  const webhookId = Array.isArray(req.headers['webhook-id']) ? req.headers['webhook-id'][0] : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) ? req.headers['webhook-timestamp'][0] : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) ? req.headers['webhook-signature'][0] : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  // Extract event data from the webhook payload
+  const webhookData: WebhookData = req.body;
+
+  try {
+    // Handle recipe completion event
+    const recipeStatus = webhookData.data.status;
+    const { id: recipeId, metadata: { title }, craftingUserReferenceId } = webhookData.data.recipe;
+
+    // Log incoming data for debugging purposes
+    console.log(`Recipe ID: ${recipeId}, Status: ${recipeStatus}, Title: ${title}`);
+
+    switch (recipeStatus) {
+      case 'completed': {
+        // Map item titles to their corresponding asset IDs
+        const itemId: Record<string, string> = {
+          fixerelixir: '49d95b8a-85aa-4308-bbb8-1ca7a583f08f',
+          quarterrevelixir: 'c02cc3f8-f834-4b00-a758-8705e9494d4f',  
+          halfrevelixir: '914770c8-68a1-4d06-a970-cdeb7fd45eff',
+          plus15powerup: '33872f3f-4de2-4027-af4d-4b1dd27cf158',
+          plus20powerup: 'c8d7acee-caa5-4fc1-a153-50e438f8a6a5',
+        };
+
+        // Normalize the title to match the key in `itemId` (lowercase and remove spaces)
+        const titleKey = title.replace(/\s+/g, '').toLowerCase();
+        const assetId = itemId[titleKey];
+
+        if (!assetId) {
+          return res.status(400).json({ message: `No matching assetId found for recipe title: ${titleKey}` });
+        }
+
+        // Issue the asset to the user
+        await axios.post(
+          `https://api.gameshift.dev/nx/stackable-assets/${assetId}`,
+          { amount: 1, destinationUserReferenceId: craftingUserReferenceId },
+          {
+            headers: {
+              accept: 'application/json',
+              'x-api-key': process.env.GAMESHIFT_API_KEY,
+              'content-type': 'application/json',
+            },
+          }
+        );
+
+        console.log(`Asset ${assetId} issued successfully to user: ${craftingUserReferenceId}`);
+        return res.status(200).json({ message: 'Asset issued successfully.' });
+      }
+
+      case 'failed':
+        console.error('Crafting failed.');
+        return res.status(400).json({ message: 'Crafting recipe failed.' });
+
+      case 'initiated':
+        console.log('Crafting initiated.');
+        return res.status(200).json({ message: 'Crafting recipe initiated.' });
+
+      default:
+        console.error('Unknown recipe status');
+        return res.status(400).json({ message: 'Unknown recipe status.' });
+    }
+  } catch (error) {
+    console.error('Error handling webhook:', error);
+    return res.status(500).json({ message: 'Failed to handle webhook', error: String(error) });
+  }
+});
+
+
+
 
 
 // app.post('/warrior', async(req, res) => {
