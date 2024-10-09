@@ -2539,6 +2539,297 @@ app.post('/webhooks/crafting-recipe-complete', async (req: Request, res: Respons
 });
 
 
+/* -------------------------------------------------------------------------- */
+/*          End of Crafting Module for Potions and Powerups                   */
+/* -------------------------------------------------------------------------- */
+
+
+
+
+/* -------------------------------------------------------------------------- */
+/*                              Update Warrior                                */
+/* -------------------------------------------------------------------------- */
+
+
+
+
+// Define types for asset attributes and event payloads
+type Attribute = {
+  traitType: string;
+  value: string;
+};
+
+type WarriorData = {
+  attributes: Attribute[];
+  imageUrl: string;
+  name: string;
+  owner: {
+    referenceId: string;
+  };
+};
+
+// Define the AssetEvent type with powerupId inside the details
+type AssetEvent = {
+  type: string;
+  assetId: string;
+  transactionId: string;
+  details: {
+    powerupId: string; // Ensure powerupId is nested inside details
+  };
+};
+
+const CharacterLevelUpThreshold = [
+  {
+    character: "tennon", // Character name in lowercase to ensure case-insensitive matching
+    hp_threshold: [200, 350, 550, 800], // Thresholds for HP at each level
+    stm_threshold: [200, 350, 550, 800] // Thresholds for STM at each level
+  }
+  // Add other characters here with their respective level thresholds
+];
+
+const CharacterImages: { [key: string]: string[] } = {
+  tennon: [
+    "https://bafybeidxbix7k7qc76ufrzcoktlixahyvdbycyu2zudgz7e3faspdxqvvi.ipfs.nftstorage.link/", // lvl 1
+    "https://bafkreieyuw62lfsknfnk5lvsbmikzmmobuzpy2j3i4l54637og4aej6uma.ipfs.nftstorage.link/", // lvl 2
+    "https://bafkreidrxl5tcydhmwonds7gaaf5qv7p4zrjhwxzpqlqtco24l76mm5i64.ipfs.nftstorage.link/", // lvl 3
+    "https://bafkreibhz56t5xmtywolroqjvhybsl5ehartjkcqz6praogsfe5wzwnbra.ipfs.nftstorage.link/", // lvl 4
+    "https://bafkreicf4424ooewqt225rhqawi72ymgwafhiqe5n43xoo4oe5odpnr5la.ipfs.nftstorage.link/"  // lvl 5
+  ]
+  // Add other characters here with their respective images for each level
+};
+
+
+
+// route to fetch and transfer powerup
+app.post('/fetch-and-transfer-powerup', async (req: { body: { assetId: string, powerupId: string } }, res: any) => {
+  const { assetId, powerupId } = req.body;
+
+  try {
+    // Step 1: Fetch warrior data using itemId (assetId)
+    console.log(`Fetching warrior data for assetId: ${assetId}`);
+    const warriorResponse = await axios.get(`https://api.gameshift.dev/nx/items/${assetId}`, {
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY
+      }
+    });
+    const warriorData: WarriorData = warriorResponse.data.item;
+
+    if (!warriorData) {
+      return res.status(404).json({ message: 'Warrior not found' });
+    }
+
+    // Extract the ownerReferenceId for powerup transfer
+    const ownerReferenceId = warriorData.owner.referenceId;
+
+    // Step 2: Log the transfer request data for debugging
+    const transferRequestData = { destinationUserReferenceId: 'self', quantity: '1' };
+    console.log(`Transferring power-up with powerupId: ${powerupId} to developer wallet`);
+    console.log(`Transfer Request Data:`, transferRequestData);
+
+    // Step 3: Transfer the power-up
+    const transferResponse = await axios.post(
+      `https://api.gameshift.dev/nx/users/${ownerReferenceId}/items/${powerupId}/transfer`,
+      transferRequestData,
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+          'content-type': 'application/json'
+        }
+      }
+    );
+
+    if (transferResponse.data && transferResponse.data.transactionId) {
+      // Step 4: Save transactionId and warriorId to Firestore for later lookup
+      const transactionId = transferResponse.data.transactionId;
+
+      await setDoc(doc(firestore, 'transactions', transactionId), {
+        warriorId: assetId,
+        powerupId: powerupId,
+        status: 'pending'
+      });
+
+      return res.status(200).json({
+        transactionId: transferResponse.data.transactionId,
+        consentUrl: transferResponse.data.consentUrl
+      });
+    } else {
+      console.log(`Transfer response incomplete:`, transferResponse.data);
+      return res.status(500).json({ message: 'Transfer initiated, but response data was incomplete.' });
+    }
+
+  } catch (error) {
+    console.error('Error during fetching or transfer:', error);
+    return res.status(500).json({ message: 'Failed to fetch item or transfer powerup', error: String(error) });
+  }
+});
+
+
+
+app.post('/webhooks/update-warrior-hint', async (req, res) => {
+  const webhookSecret = process.env.GAMESHIFT_WEBHOOK_VALIDATION_KEY;
+
+  if (!webhookSecret) {
+    console.error('Webhook secret not found');
+    return res.status(500).json({ message: 'Webhook secret not configured' });
+  }
+
+  // Extract headers for webhook signature verification
+  const webhookId = Array.isArray(req.headers['webhook-id']) ? req.headers['webhook-id'][0] : req.headers['webhook-id'];
+  const webhookTimestamp = Array.isArray(req.headers['webhook-timestamp']) ? req.headers['webhook-timestamp'][0] : req.headers['webhook-timestamp'];
+  const webhookSignature = Array.isArray(req.headers['webhook-signature']) ? req.headers['webhook-signature'][0] : req.headers['webhook-signature'];
+
+  if (!webhookId || !webhookTimestamp || !webhookSignature) {
+    console.log('Missing webhook headers');
+    return res.status(400).json({ message: 'Missing webhook headers' });
+  }
+
+  const assetEventData = req.body?.data;  // Correctly access the event payload
+  const isVerified = verifyWebhook(webhookId, webhookTimestamp, webhookSignature, assetEventData, webhookSecret);
+
+  if (!isVerified) {
+    console.log('Invalid webhook signature, rejecting request');
+    return res.status(403).json({ message: 'Invalid webhook signature' });
+  }
+
+  try {
+    const eventType = req.body?.type;
+
+    switch (eventType) {
+      case 'stackableAsset.transfer.completed': {
+        const { transactionId, assetId: powerupId } = assetEventData;  // Use destructuring for assetId (powerupId)
+        
+        // Step 1: Fetch the warriorId from Firestore using transactionId
+        const transactionDoc = await getDoc(doc(firestore, 'transactions', transactionId));
+
+        if (transactionDoc.exists()) {
+          const { warriorId } = transactionDoc.data();  // Extract warriorId from transaction data
+          console.log('Found warriorId:', warriorId);
+
+          // Step 2: Upgrade the warrior after transfer
+          await upgradeWarriorAfterTransfer(warriorId, powerupId);
+
+          // Step 3: Update the transaction status in Firestore to "completed"
+          await updateDoc(doc(firestore, 'transactions', transactionId), { status: 'completed' });
+
+          return res.status(200).json({ message: 'Asset transfer completed and warrior upgraded.' });
+        } else {
+          console.log('Transaction not found');
+          return res.status(404).json({ message: 'Transaction not found' });
+        }
+      }
+
+      case 'stackableAsset.transfer.initiated': {
+        const { transactionId, assetId } = assetEventData;  // Ensure correct access to assetId and transactionId
+        console.log(`Asset transfer initiated for assetId: ${assetId}, transactionId: ${transactionId}`);
+        res.status(200).json({ message: 'Asset transfer initiated.' });
+        break;
+      }
+          
+      case 'stackableAsset.transfer.failed': {
+        const { transactionId, assetId } = assetEventData;  // Ensure correct access to assetId and transactionId
+        console.error(`Asset transfer failed for assetId: ${assetId}, transactionId: ${transactionId}`);
+        res.status(500).json({ message: 'Asset transfer failed.' });
+        break;
+      }
+
+      default:
+        return res.status(400).json({ message: 'Unknown event type.' });
+    }
+  } catch (error) {
+    console.error('Error handling asset transfer event:', error);
+    return res.status(500).json({ message: 'Failed to handle asset transfer event', error: String(error) });
+  }
+});
+
+
+
+
+// Helper function to upgrade the warrior after power-up transfer
+async function upgradeWarriorAfterTransfer(assetId: string, powerupId: string) {
+  try {
+    // Fetch warrior data using warriorId
+    const warriorResponse = await axios.get(`https://api.gameshift.dev/nx/items/${assetId}`, {
+      headers: {
+        accept: 'application/json',
+        'x-api-key': process.env.GAMESHIFT_API_KEY
+      }
+    });
+    const warriorData = warriorResponse.data.item;
+
+    // Extract HP, STM, LVL, and imageUrl from warrior attributes
+    let OLD_HP: number | undefined, OLD_STM: number | undefined, OLD_LVL: number | undefined, OLD_IMAGEURL: string | undefined;
+    warriorData.attributes.forEach((attr: any) => {
+      if (attr.traitType === "HP") OLD_HP = parseInt(attr.value);
+      if (attr.traitType === "STM") OLD_STM = parseInt(attr.value);
+      if (attr.traitType === "LVL") OLD_LVL = parseInt(attr.value);
+      OLD_IMAGEURL = warriorData.imageUrl; // Set imageUrl from warrior data
+    });
+
+    if (OLD_HP === undefined || OLD_STM === undefined || OLD_LVL === undefined || OLD_IMAGEURL === undefined) {
+      throw new Error('Warrior attributes not found');
+    }
+
+    // Determine the type of powerup and set the powerUpValue based on powerupId
+    let powerUpValue: number;
+    if (powerupId === '33872f3f-4de2-4027-af4d-4b1dd27cf158') {
+      powerUpValue = 15; // Example power-up
+    } else if (powerupId === 'c8d7acee-caa5-4fc1-a153-50e438f8a6a5') {
+      powerUpValue = 20; // Example power-up
+    } else {
+      throw new Error('Invalid powerupId');
+    }
+
+    // Calculate new HP, STM, and check for level up
+    let NEW_HP = OLD_HP + powerUpValue;
+    let NEW_STM = OLD_STM + powerUpValue;
+    let NEW_LVL = OLD_LVL;
+    let NEW_IMAGEURL = OLD_IMAGEURL;
+
+    // Fetch level thresholds and images for this warrior character
+    const characterName = warriorData.name.toLowerCase();
+    const thresholds = CharacterLevelUpThreshold.find(char => char.character === characterName);
+
+    if (thresholds) {
+      const levelIndex = OLD_LVL - 1; // Since level arrays are 0-indexed
+      if (NEW_HP >= thresholds.hp_threshold[levelIndex] && NEW_STM >= thresholds.stm_threshold[levelIndex]) {
+        NEW_LVL = OLD_LVL + 1;
+        NEW_IMAGEURL = CharacterImages[characterName][NEW_LVL - 1]; // Update image based on new level
+      }
+    }
+
+    // Update warrior asset with new attributes and image
+    await axios.put(
+      `https://api.gameshift.dev/nx/unique-assets/${assetId}`,
+      {
+        attributes: [
+          { traitType: 'HP', value: `${NEW_HP}` },
+          { traitType: 'STM', value: `${NEW_STM}` },
+          { traitType: 'LVL', value: `${NEW_LVL}` },
+          { traitType: 'GLD', value: 'Strykur' }
+        ],
+        imageUrl: NEW_IMAGEURL
+      },
+      {
+        headers: {
+          accept: 'application/json',
+          'x-api-key': process.env.GAMESHIFT_API_KEY,
+          'content-type': 'application/json'
+        }
+      }
+    );
+
+    console.log(`Warrior updated successfully: HP=${NEW_HP}, STM=${NEW_STM}, LVL=${NEW_LVL}`);
+    
+  } catch (error) {
+    console.error('Error upgrading warrior after transfer:', error);
+    throw error;
+  }
+}
+
+
+
 
 
 
