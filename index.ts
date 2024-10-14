@@ -4,12 +4,12 @@ import axios from 'axios';
 import { Request, Response } from 'express';
 import * as crypto from 'crypto';
 import { auth, firestore } from './config/firebaseConfig';
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail, updatePassword, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { getDocs, doc, collection, setDoc, updateDoc, deleteDoc, increment, getDoc } from 'firebase/firestore';
 import { setLogLevel } from 'firebase/app';
-setLogLevel('debug');
-// const cron = require("node-cron");
+
 dotenv.config();
+
 const app: express.Application = express();
 const port = process.env.PORT || 8080;
 const cors = require('cors');
@@ -231,6 +231,32 @@ app.post('/resetPassword', async (req, res) => {
 /* ----------------- Change/Update Password with Firebase Auth --------------------------- */
 
 
+// app.post('/changePassword', async (req, res) => {
+//   const { newPassword } = req.body;
+
+//   try {
+//     const user = auth.currentUser; // Get the currently logged-in user
+
+//     if (user) {
+//       await updatePassword(user, newPassword); // Update password
+//       res.status(200).json({
+//         message: 'Password updated successfully!',
+//       });
+//     } else {
+//       res.status(400).json({
+//         message: 'No user is logged in.',
+//       });
+//     }
+    
+//   } catch (error) {
+//     console.error("Unexpected error", error);
+//       res.status(500).send({
+//         message: 'Failed to update password.',
+//         error: String(error),
+//       });
+//   }
+// });
+
 app.post('/changePassword', async (req, res) => {
   const { newPassword } = req.body;
 
@@ -238,7 +264,12 @@ app.post('/changePassword', async (req, res) => {
     const user = auth.currentUser; // Get the currently logged-in user
 
     if (user) {
-      await updatePassword(user, newPassword); // Update password
+      // Get the ID token for the currently authenticated user
+      const token = await user.getIdToken();
+      console.log('ID Token:', token);
+
+      // Update password
+      await updatePassword(user, newPassword); 
       res.status(200).json({
         message: 'Password updated successfully!',
       });
@@ -247,15 +278,120 @@ app.post('/changePassword', async (req, res) => {
         message: 'No user is logged in.',
       });
     }
-    
+
   } catch (error) {
     console.error("Unexpected error", error);
-      res.status(500).send({
-        message: 'Failed to update password.',
-        error: String(error),
-      });
+    res.status(500).send({
+      message: 'Failed to update password.',
+      error: String(error),
+    });
   }
 });
+
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Log in the user with Firebase Auth
+    const userCredential = await signInWithEmailAndPassword(auth, email, password); // Corrected function usage
+    const user = userCredential.user;
+
+    // Get the ID token after login
+    const token = await user.getIdToken();
+
+    // Respond with the ID token and user info
+    res.status(200).json({
+      message: 'Login successful',
+      token: token,
+      user: {
+        uid: user.uid,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Error during login:', error);
+
+    if (error instanceof Error) {
+      res.status(500).json({
+        message: 'Login failed',
+        error: error.message,
+      });
+    } else {
+      res.status(500).json({
+        message: 'An unexpected error occurred during login',
+        error: String(error),
+      });
+    }
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/* ----------------- Check if User is Logged In --------------------------- */
+app.get('/checkLoginStatus', async (req, res) => {
+  try {
+    const user = auth.currentUser; // Check the currently logged-in user
+
+    if (user) {
+      const token = await user.getIdToken();
+      res.status(200).json({
+        isLoggedIn: true,
+        message: 'User is logged in',
+        token: token,
+        user: {
+          uid: user.uid,
+          email: user.email,
+        },
+      });
+    } else {
+      res.status(200).json({
+        isLoggedIn: false,
+        message: 'No user is logged in',
+      });
+    }
+  } catch (error) {
+    console.error('Error checking login status:', error);
+
+    if (error instanceof Error) {
+      res.status(500).json({
+        message: 'Failed to check login status',
+        error: error.message,
+      });
+    } else {
+      res.status(500).json({
+        message: 'An unexpected error occurred while checking login status',
+        error: String(error),
+      });
+    }
+  }
+});
+
+
+/* ----------------- LOGOUT --------------------- */
+
+app.post('/logout', async (req, res) => {
+  try {
+    await signOut(auth); // Sign out the user
+
+    res.status(200).json({
+      message: 'Logout successful',
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+
+    if (error instanceof Error) {
+      res.status(500).json({
+        message: 'Logout failed',
+        error: error.message,
+      });
+    } else {
+      res.status(500).json({
+        message: 'An unexpected error occurred during logout',
+        error: String(error),
+      });
+    }
+  }
+});
+
 
 /* -------------------------------------------------------------------------- */
 /*               End of Register User with Gameshift Code                     */
