@@ -1,20 +1,17 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import * as dotenv from "dotenv";
 
-
 // Load the appropriate .env file based on NODE_ENV
-if (process.env.NODE_ENV === 'production') {
-  dotenv.config({ path: '.env' });
+if (process.env.NODE_ENV === "production") {
+  dotenv.config({ path: ".env" });
 } else {
-  dotenv.config({ path: '.env.development' });
+  dotenv.config({ path: ".env.development" });
 }
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("FIREBASE_API_KEY:", process.env.FIREBASE_API_KEY);
-
-
 
 // Firebase configuration object, loaded from environment variables
 const firebaseConfig = {
@@ -26,22 +23,21 @@ const firebaseConfig = {
   appId: process.env.FIREBASE_APP_ID,
 };
 
-
-
-
-
 // Initialize Firebase with the configuration
 const app = initializeApp(firebaseConfig);
 
 // Log the Firestore project ID (Database ID)
-const databaseLocation = 'nam5';  // Manually set the region from your Firestore details
+const databaseLocation = "nam5"; // Manually set the region from your Firestore details
 const databaseId = `${firebaseConfig.projectId}-${databaseLocation}`;
 
 // Log the constructed Database ID
 console.log("Connected Firestore Database ID:", databaseId);
 
-console.log("Firebase initialized:", app.name); 
-console.log("Connected Firestore Project ID (Database ID):", firebaseConfig.projectId);
+console.log("Firebase initialized:", app.name);
+console.log(
+  "Connected Firestore Project ID (Database ID):",
+  firebaseConfig.projectId,
+);
 
 // Export Firestore and Firebase Authentication instances
 export const auth = getAuth(app);
